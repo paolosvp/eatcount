@@ -221,6 +221,7 @@ function DayLogPanel({ auth, refreshKey }) {
   };
 
   useEffect(()=>{ fetchMeals(); }, [auth.token, date, refreshKey]);
+  useEffect(()=>{ /* keep date input in local format */ }, [date]);
 
   const remove = async (id) => {
     if (!auth.token) return;
