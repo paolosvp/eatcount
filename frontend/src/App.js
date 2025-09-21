@@ -505,7 +505,7 @@ export default function App(){
           <ScannerPanel auth={auth} onSaved={(saved) => { setLogRefreshKey(k=>k+1); }} />
         </div>
         <div style={{marginTop:16}}>
-          <DayLogPanel auth={auth} refreshKey={logRefreshKey} />
+          <DayLogPanel auth={auth} refreshKey={logRefreshKey} optimisticAdd={null} />
         </div>
         <div className="footer-space" />
       </Section>
