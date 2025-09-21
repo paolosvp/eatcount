@@ -213,8 +213,9 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
     if (!auth.token) { setMeals([]); setTotal(0); setTarget(null); setPending([]); return; }
     try {
       const tz = new Date().getTimezoneOffset();
+      const queryDate = date; // already local date string
       const [mealsRes, profileRes, streakRes] = await Promise.all([
-        axios.get(`${API}/meals`, { params: { date, tz_offset_minutes: tz }, headers }),
+        axios.get(`${API}/meals`, { params: { date: queryDate, tz_offset_minutes: tz }, headers }),
         axios.get(`${API}/profile/me`, { headers }),
         axios.get(`${API}/meals/stats`, { headers })
       ]);
