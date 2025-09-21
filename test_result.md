@@ -155,6 +155,17 @@ backend:
       - working: true
         agent: "testing"
         comment: "LIVE AI ESTIMATION VERIFIED: POST /api/ai/estimate-calories with simulate=false and empty api_key successfully uses emergent LLM key (EMERGENT_LLM_KEY=sk-emergent-772AdD827522fCa268). Response includes engine_info.key_mode=emergent confirming proper key policy implementation. Real GPT-4o integration working with timezone and key policy patch."
+  - task: "Meals CRUD with timezone support"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "TIMEZONE SUPPORT VERIFIED: POST /api/meals with captured_at='2025-01-15T12:00:00+02:00' preserves timezone information correctly. GET /api/meals with tz_offset_minutes=-120 properly converts local calendar day to UTC range and returns meals on correct day with daily_total calculation. DELETE /api/meals/{id} successfully removes meals and verification confirms removal. All timezone handling working as expected."
 
 frontend:
   - task: "Hero + Layout + Navigation"
