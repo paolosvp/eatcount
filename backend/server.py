@@ -292,9 +292,24 @@ async def estimate_calories(payload: AIRequest):
         }
         return JSONResponse(content=sample)
 
-    key = payload.api_key or EMERGENT_LLM_KEY
+    provided_key = (payload.api_key or "").strip() if payload.api_key is not None else ""
+    effective_key = provided_key or (EMERGENT_LLM_KEY or "").strip()
+    if not effective_key:
+        # No usable key after trimming, fall back to simulated response
+        sample = {
+            "total_calories": 420,
+            "items": [
+                {"name": "Grilled chicken", "quantity_units": "150g", "calories": 250, "confidence": 0.78},
+                {"name": "Mixed salad", "quantity_units": "1 bowl", "calories": 80, "confidence": 0.7},
+                {"name": "Olive oil", "quantity_units": "1 tbsp", "calories": 90, "confidence": 0.65}
+            ],
+            "confidence": 0.74,
+            "notes": "Simulated estimate (no API key available)"
+        }
+        return JSONResponse(content=sample)
+
     try:
-        chat = LlmChat(api_key=key, session_id=str(uuid.uuid4()), system_message=SYSTEM_PROMPT).with_model("openai", "gpt-4o")
+        chat = LlmChat(api_key=effective_key, session_id=str(uuid.uuid4()), system_message=SYSTEM_PROMPT).with_model("openai", "gpt-4o")
         files: List[ImageContent] = [ImageContent(image_base64=img.data) for img in payload.images]
         user_text = payload.message or "Estimate calories for the attached food image(s)."
         umsg = UserMessage(text=user_text, file_contents=files)
