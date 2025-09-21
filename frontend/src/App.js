@@ -281,6 +281,33 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
       <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
         <input className="input" type="date" value={date} onChange={e=>setDate(e.target.value)} />
         <div className="small">Total: <b>{Math.round(displayTotal)}</b> kcal {target ? `(of ${target})` : ''}</div>
+        <button className="btn-secondary" onClick={async ()=>{
+          // Download CSV of current date
+          const rows = [
+            ['created_at','name','quantity_units','calories','notes'],
+          ];
+          const list = displayMeals;
+          list.forEach(m => {
+            const when = new Date(m.created_at).toLocaleString();
+            if (Array.isArray(m.items) && m.items.length>0) {
+              m.items.forEach(it => {
+                rows.push([when, String(it.name||''), String(it.quantity_units||''), String(it.calories||0), String(m.notes||'')]);
+              })
+            } else {
+              rows.push([when, '', '', String(m.total_calories||0), String(m.notes||'')]);
+            }
+          });
+          const csv = rows.map(r => r.map(v => '"'+String(v).replaceAll('"','""')+'"').join(',')).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `meals_${date}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }}>Download CSV</button>
         {target !== null && (
           <div style={{flexBasis:'100%', marginTop:6}}>
             <div style={{height:10, borderRadius:6, background:'rgba(24,24,24,0.08)', overflow:'hidden'}}>
