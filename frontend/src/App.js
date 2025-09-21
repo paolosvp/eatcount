@@ -281,8 +281,8 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
         <div className="small">Streak: <b>{streak.current_streak_days}</b> days (best {streak.best_streak_days})</div>
       </div>
       <div className="items-list" style={{marginTop:8}}>
-        {meals.length === 0 && <div className="small">No entries for this day.</div>}
-        {meals.map((m) => (
+        {displayMeals.length === 0 && <div className="small">No entries for this day.</div>}
+        {displayMeals.map((m) => (
           <div key={m.id} className="item-row" style={{alignItems:'flex-start', gap:8}}>
             <div style={{display:'flex', gap:10, alignItems:'flex-start'}}>
               {m.image_base64 && (
