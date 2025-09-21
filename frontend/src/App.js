@@ -238,7 +238,7 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
   // Optimistic add: only if the saved meal is for the currently viewed date (assume today)
   useEffect(() => {
     if (!optimisticAdd) return;
-    const isSameDay = (new Date().toISOString().slice(0,10) === date);
+    const isSameDay = (localDateStr() === date);
     if (!isSameDay) return;
     setPending((p)=>{
       const exists = p.some(x => x.id === optimisticAdd.id);
