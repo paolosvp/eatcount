@@ -275,6 +275,13 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
   const displayTotal = Math.round((Number(total||0) + pendingTotal) * 100) / 100;
   const pct = target ? Math.min(100, Math.round((displayTotal/target)*100)) : null;
 
+  const browserTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const formatLocal = (iso) => {
+    try {
+      return new Date(iso).toLocaleString([], { timeZone: browserTZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+    } catch { return iso; }
+  };
+
   return (
     <div className="card">
       <h3 style={{marginTop:0}}>Day Log</h3>
@@ -288,7 +295,7 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
           ];
           const list = displayMeals;
           list.forEach(m => {
-            const when = new Date(m.created_at).toLocaleString();
+            const when = formatLocal(m.created_at);
             if (Array.isArray(m.items) && m.items.length>0) {
               m.items.forEach(it => {
                 rows.push([when, String(it.name||''), String(it.quantity_units||''), String(it.calories||0), String(m.notes||'')]);
