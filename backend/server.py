@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date as date_cls
 from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
 from jose import jwt, JWTError
@@ -325,7 +325,7 @@ class MealCreate(BaseModel):
     items: List[MealItem]
     notes: Optional[str] = None
     image_base64: Optional[str] = None
-    captured_at: Optional[str] = None  # ISO string, optional
+    captured_at: Optional[str] = None
 
 
 class MealOut(BaseModel):
@@ -344,7 +344,6 @@ class MealsForDateResponse(BaseModel):
 
 
 def _today_range_utc(date_str: Optional[str] = None):
-    # date_str is YYYY-MM-DD in user's local (assume UTC for MVP)
     if date_str:
         try:
             y, m, d = [int(x) for x in date_str.split('-')]
@@ -370,7 +369,7 @@ async def add_meal(meal: MealCreate, user=Depends(get_current_user)):
         "total_calories": float(meal.total_calories),
         "items": [i.model_dump() for i in meal.items],
         "notes": meal.notes,
-        "image_base64": meal.image_base64,  # base64 per guideline
+        "image_base64": meal.image_base64,
         "created_at": created_at
     }
     await db.meals.insert_one(doc)
@@ -413,6 +412,42 @@ async def delete_meal(meal_id: str, user=Depends(get_current_user)):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Meal not found")
     return {"deleted": True}
+
+
+@api.get('/meals/stats')
+async def meal_stats(user=Depends(get_current_user)):
+    # Aggregate unique days with meals (UTC)
+    cursor = db.meals.find({"user_id": user['_id']}, {"created_at": 1}).sort("created_at", 1)
+    days = []
+    async for m in cursor:
+        dt = m.get('created_at')
+        if not dt:
+            continue
+        day = dt.date()
+        if not days or days[-1] != day:
+            days.append(day)
+
+    # Compute current streak (consecutive days ending today)
+    today = datetime.now(timezone.utc).date()
+    day_set = set(days)
+    cur = 0
+    d = today
+    while d in day_set:
+        cur += 1
+        d = d - timedelta(days=1)
+
+    # Compute best streak
+    best = 0
+    i = 0
+    days_sorted = sorted(day_set)
+    while i < len(days_sorted):
+        j = i
+        while j + 1 < len(days_sorted) and days_sorted[j + 1] == days_sorted[j] + timedelta(days=1):
+            j += 1
+        best = max(best, j - i + 1)
+        i = j + 1
+
+    return {"current_streak_days": cur, "best_streak_days": best}
 
 
 # Include router

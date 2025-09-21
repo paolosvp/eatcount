@@ -199,44 +199,79 @@ function DayLogPanel({ auth, refreshKey }) {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0,10));
   const [meals, setMeals] = useState([]);
   const [total, setTotal] = useState(0);
+  const [target, setTarget] = useState(null);
+  const [streak, setStreak] = useState({ current_streak_days: 0, best_streak_days: 0 });
   const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
 
   const fetchMeals = async () => {
-    if (!auth.token) { setMeals([]); setTotal(0); return; }
+    if (!auth.token) { setMeals([]); setTotal(0); setTarget(null); return; }
     try {
-      const res = await axios.get(`${API}/meals`, { params: { date }, headers });
-      setMeals(res.data.meals || []);
-      setTotal(res.data.daily_total || 0);
+      const [mealsRes, profileRes, streakRes] = await Promise.all([
+        axios.get(`${API}/meals`, { params: { date }, headers }),
+        axios.get(`${API}/profile/me`, { headers }),
+        axios.get(`${API}/meals/stats`, { headers })
+      ]);
+      setMeals(mealsRes.data.meals || []);
+      setTotal(mealsRes.data.daily_total || 0);
+      setTarget(profileRes.data.profile?.recommended_daily_calories || null);
+      setStreak(streakRes.data || { current_streak_days: 0, best_streak_days: 0 });
     } catch (e) {
-      setMeals([]); setTotal(0);
+      setMeals([]); setTotal(0); setTarget(null);
     }
   };
 
   useEffect(()=>{ fetchMeals(); }, [auth.token, date, refreshKey]);
+
+  const remove = async (id) => {
+    if (!auth.token) return;
+    try {
+      await axios.delete(`${API}/meals/${id}`, { headers });
+      await fetchMeals();
+    } catch (e) { /* ignore */ }
+  };
+
+  const pct = target ? Math.min(100, Math.round((total/target)*100)) : null;
 
   return (
     <div className="card">
       <h3 style={{marginTop:0}}>Day Log</h3>
       <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
         <input className="input" type="date" value={date} onChange={e=>setDate(e.target.value)} />
-        <div className="small">Total: <b>{Math.round(total)}</b> kcal</div>
+        <div className="small">Total: <b>{Math.round(total)}</b> kcal {target ? `(of ${target})` : ''}</div>
+        {target !== null && (
+          <div style={{flexBasis:'100%', marginTop:6}}>
+            <div style={{height:10, borderRadius:6, background:'rgba(24,24,24,0.08)', overflow:'hidden'}}>
+              <div style={{width: `${pct}%`, height:'100%', background:'rgb(0,128,255)'}} />
+            </div>
+            <div className="small" style={{marginTop:4}}>{pct}% of daily target</div>
+          </div>
+        )}
+        <div className="small">Streak: <b>{streak.current_streak_days}</b> days (best {streak.best_streak_days})</div>
       </div>
       <div className="items-list" style={{marginTop:8}}>
         {meals.length === 0 && <div className="small">No entries for this day.</div>}
         {meals.map((m) => (
-          <div key={m.id} className="item-row" style={{alignItems:'flex-start'}}>
-            <div>
-              <div><b>{Math.round(m.total_calories)}</b> kcal</div>
-              <div className="small">{new Date(m.created_at).toLocaleTimeString()}</div>
-              {m.notes && <div className="small">{m.notes}</div>}
+          <div key={m.id} className="item-row" style={{alignItems:'flex-start', gap:8}}>
+            <div style={{display:'flex', gap:10, alignItems:'flex-start'}}>
+              {m.image_base64 && (
+                <img src={`data:image/jpeg;base64,${m.image_base64}`} alt="meal" style={{width:64, height:64, objectFit:'cover', borderRadius:8, border:'1px solid var(--border-light)'}} />
+              )}
+              <div>
+                <div><b>{Math.round(m.total_calories)}</b> kcal</div>
+                <div className="small">{new Date(m.created_at).toLocaleTimeString()}</div>
+                {m.notes && <div className="small">{m.notes}</div>}
+              </div>
             </div>
-            <div style={{textAlign:'right'}}>
+            <div style={{textAlign:'right', flex:1}}>
               <div className="small">Items</div>
               <div className="small">
                 {m.items.map((it, idx)=> (
                   <div key={idx}>{it.name} • {it.quantity_units} • {Math.round(it.calories)} kcal</div>
                 ))}
               </div>
+            </div>
+            <div>
+              <button className="btn-secondary" onClick={()=>remove(m.id)}>Delete</button>
             </div>
           </div>
         ))}
@@ -257,7 +292,7 @@ function ScannerPanel({ auth, onSaved }) {
   const [simulate, setSimulate] = useState(() => {
     const saved = localStorage.getItem('simulate_mode');
     return saved ? saved === 'true' : true; // default ON
-  }); // enabled until user adds key
+  });
   const [apiKey, setApiKey] = useState('');
 
   useEffect(()=>{
