@@ -196,7 +196,8 @@ function ProfilePanel({ auth }) {
 }
 
 function DayLogPanel({ auth, refreshKey }) {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0,10));
+  const localDateYMD = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in browser local tz
+  const [date, setDate] = useState(() => localDateYMD());
   const [meals, setMeals] = useState([]);
   const [total, setTotal] = useState(0);
   const [target, setTarget] = useState(null);
