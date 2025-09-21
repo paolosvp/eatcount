@@ -269,7 +269,7 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
       <h3 style={{marginTop:0}}>Day Log</h3>
       <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
         <input className="input" type="date" value={date} onChange={e=>setDate(e.target.value)} />
-        <div className="small">Total: <b>{Math.round(total)}</b> kcal {target ? `(of ${target})` : ''}</div>
+        <div className="small">Total: <b>{Math.round(displayTotal)}</b> kcal {target ? `(of ${target})` : ''}</div>
         {target !== null && (
           <div style={{flexBasis:'100%', marginTop:6}}>
             <div style={{height:10, borderRadius:6, background:'rgba(24,24,24,0.08)', overflow:'hidden'}}>
