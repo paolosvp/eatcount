@@ -201,20 +201,28 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
   const [total, setTotal] = useState(0);
   const [target, setTarget] = useState(null);
   const [streak, setStreak] = useState({ current_streak_days: 0, best_streak_days: 0 });
+  const [pending, setPending] = useState([]); // optimistic meals not yet seen from server
   const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
 
   const fetchMeals = async () => {
-    if (!auth.token) { setMeals([]); setTotal(0); setTarget(null); return; }
+    if (!auth.token) { setMeals([]); setTotal(0); setTarget(null); setPending([]); return; }
     try {
+      const tz = new Date().getTimezoneOffset();
       const [mealsRes, profileRes, streakRes] = await Promise.all([
-        axios.get(`${API}/meals`, { params: { date, tz_offset_minutes: new Date().getTimezoneOffset() }, headers }),
+        axios.get(`${API}/meals`, { params: { date, tz_offset_minutes: tz }, headers }),
         axios.get(`${API}/profile/me`, { headers }),
         axios.get(`${API}/meals/stats`, { headers })
       ]);
-      setMeals(mealsRes.data.meals || []);
+      const serverMeals = mealsRes.data.meals || [];
+      setMeals(serverMeals);
       setTotal(mealsRes.data.daily_total || 0);
       setTarget(profileRes.data.profile?.recommended_daily_calories || null);
       setStreak(streakRes.data || { current_streak_days: 0, best_streak_days: 0 });
+      // Drop pending items that are now present in server list
+      setPending((p) => {
+        const ids = new Set(serverMeals.map(x => x.id));
+        return p.filter(x => !x.id || !ids.has(x.id));
+      });
     } catch (e) {
       setMeals([]); setTotal(0); setTarget(null);
     }
@@ -222,22 +230,25 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
 
   useEffect(()=>{ fetchMeals(); }, [auth.token, date, refreshKey]);
 
-  // Optimistic update for progress bar and total when a save just happened for the current date
+  // Optimistic add: only if the saved meal is for the currently viewed date (assume today)
   useEffect(() => {
     if (!optimisticAdd) return;
     const isSameDay = (new Date().toISOString().slice(0,10) === date);
     if (!isSameDay) return;
-    setTotal(t => Math.round((t + (Number(optimisticAdd.total_calories||0))) * 100) / 100);
-    setMeals(m => [{
-      id: optimisticAdd.id || `temp-${Date.now()}`,
-      total_calories: optimisticAdd.total_calories,
-      items: optimisticAdd.items || [],
-      notes: optimisticAdd.notes || '',
-      image_base64: optimisticAdd.image_base64 || '',
-      created_at: optimisticAdd.created_at || new Date().toISOString()
-    }, ...m]);
-    // Do not persist; next server fetch will canonize data
-  }, [optimisticAdd]);
+    setPending((p)=>{
+      const exists = p.some(x => x.id === optimisticAdd.id);
+      if (exists) return p;
+      const entry = {
+        id: optimisticAdd.id || `temp-${Date.now()}`,
+        total_calories: Number(optimisticAdd.total_calories||0),
+        items: Array.isArray(optimisticAdd.items)? optimisticAdd.items: [],
+        notes: optimisticAdd.notes || '',
+        image_base64: optimisticAdd.image_base64 || '',
+        created_at: optimisticAdd.created_at || new Date().toISOString()
+      };
+      return [entry, ...p];
+    });
+  }, [optimisticAdd, date]);
 
   const remove = async (id) => {
     if (!auth.token) return;
