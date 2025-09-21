@@ -359,14 +359,25 @@ function ScannerPanel({ auth, onSaved }) {
     if (!result) { setError('No estimate to save'); return; }
     try {
       const headers = { Authorization: `Bearer ${auth.token}` };
+      // Normalize items to backend schema defensively
+      const normalizeItem = (it) => ({
+        name: String(it?.name || '').trim() || 'Item',
+        quantity_units: String(it?.quantity_units || it?.quantity || it?.portion || '').trim(),
+        calories: Number(it?.calories || 0),
+        confidence: Math.max(0, Math.min(1, Number(it?.confidence ?? 0.7)))
+      });
+      const normItems = Array.isArray(result.items) ? result.items.map(normalizeItem) : [];
+      const total = Number(result.total_calories || 0);
       const payload = {
-        total_calories: result.total_calories,
-        items: result.items,
-        notes: desc || result.notes,
+        total_calories: total,
+        items: normItems,
+        notes: (desc || result.notes || '').toString(),
         image_base64: snapshot,
       };
       await axios.post(`${API}/meals`, payload, { headers });
       onSaved && onSaved();
+      setError('');
+      alert('Saved to Day Log');
     } catch (e) {
       setError(e?.response?.data?.detail || e.message);
     }
