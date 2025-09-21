@@ -207,8 +207,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Backend AI estimate real call with gpt-4o once key provided"
-    - "Frontend auth and profile flow manual check"
+    - "Backend AI estimate real call with gpt-4o using Emergent LLM Key"
+    - "Frontend automated testing for auth/profile/scanner flows"
   stuck_tasks:
     - "None"
   test_all: false
