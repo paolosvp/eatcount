@@ -307,8 +307,9 @@ function ScannerPanel() {
         <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
           <button className="btn-primary" disabled={!snapshot || loading} onClick={sendEstimate}>{loading? 'Estimating...':'Estimate Calories'}</button>
           <label className="small" style={{display:'inline-flex', alignItems:'center', gap:6}}>
-            <input type="checkbox" checked={simulate} onChange={e=>setSimulate(e.target.checked)} /> Test mode (no API key)
+            <input type="checkbox" checked={simulate} onChange={e=>{setSimulate(e.target.checked); localStorage.setItem('simulate_mode', String(e.target.checked));}} /> Test mode (no API key)
           </label>
+          <span className="small" aria-label="inference-mode" style={{padding:'6px 10px', border:'1px solid var(--border-light)', borderRadius: 8}}>Mode: {simulate ? 'Simulated' : 'Live'}</span>
           <input className="input" style={{maxWidth:300, display: simulate ? 'none' : 'block'}} type="password" placeholder="Enter API key or leave blank to use Emergent LLM Key"
             value={apiKey} onChange={e=>setApiKey(e.target.value)} />
         </div>
