@@ -438,16 +438,16 @@ function ScannerPanel({ auth, onSaved }) {
         {result && (
           <div className="card" style={{marginTop:12}}>
             <div className="small">Confidence: {result.confidence !== undefined ? (result.confidence*100).toFixed(0) : '—'}%</div>
-            <h4 style={{margin:'8px 0'}}>Total: {Math.round(result.total_calories)} kcal</h4>
+            <h4 style={{margin:'8px 0'}}>Total: {Math.round(Number(result.total_calories || 0))} kcal</h4>
             <div className="items-list">
-              {result.items?.map((it, idx)=> (
+              {(Array.isArray(result.items) ? result.items : []).map((it, idx)=> (
                 <div className="item-row" key={idx}>
-                  <div>{it.name} • {it.quantity_units}</div>
-                  <div><b>{Math.round(it.calories)}</b> kcal</div>
+                  <div>{(it?.name||'Item')} • {(it?.quantity_units||it?.quantity||it?.portion||'')}</div>
+                  <div><b>{Math.round(Number(it?.calories||0))}</b> kcal</div>
                 </div>
               ))}
             </div>
-            {result.notes && <div className="small" style={{marginTop:8}}>{result.notes}</div>}
+            {result.notes && <div className="small" style={{marginTop:8}}>{String(result.notes)}</div>}
             {auth.token && (
               <div style={{marginTop:8}}>
                 <button className="btn-secondary" onClick={saveLog}>Save to Day Log</button>
