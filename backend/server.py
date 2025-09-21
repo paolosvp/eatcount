@@ -1,9 +1,9 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, status, Request
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
 from jose import jwt, JWTError
@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 import os
 import uuid
 import logging
-import re
 import json
 
 # LLM integration
@@ -124,16 +123,9 @@ class ProfileResponse(BaseModel):
 
 
 class ImageAttachment(BaseModel):
-    data: str  # base64 only payload, no data: prefix required (frontend will send pure base64)
+    data: str  # base64 only
     mime_type: str = Field(pattern=r"^image\/(jpeg|png|gif|webp)$")
     filename: Optional[str] = None
-
-
-class AIRequest(BaseModel):
-    message: Optional[str] = ""
-    images: List[ImageAttachment]
-    api_key: Optional[str] = None
-    simulate: Optional[bool] = False
 
 
 class AIItem(BaseModel):
@@ -141,6 +133,13 @@ class AIItem(BaseModel):
     quantity_units: str
     calories: float
     confidence: float
+
+
+class AIRequest(BaseModel):
+    message: Optional[str] = ""
+    images: List[ImageAttachment]
+    api_key: Optional[str] = None
+    simulate: Optional[bool] = False
 
 
 class AIResponse(BaseModel):
@@ -160,7 +159,6 @@ ACTIVITY_FACTORS = {
 }
 
 GOAL_ADJUST = {
-    # kcal to add/subtract
     ("lose", "mild"): -250,
     ("lose", "moderate"): -500,
     ("lose", "aggressive"): -750,
@@ -174,7 +172,6 @@ GOAL_ADJUST = {
 
 
 def compute_daily_calories(height_cm: float, weight_kg: float, age: int, gender: str, activity_level: str, goal: str, goal_intensity: str) -> int:
-    # Mifflin-St Jeor BMR
     bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + (5 if gender == 'male' else -161)
     tdee = bmr * ACTIVITY_FACTORS[activity_level]
     adjust = GOAL_ADJUST[(goal, goal_intensity)]
@@ -264,7 +261,6 @@ SYSTEM_PROMPT = (
 
 
 def _force_extract_json(text: str) -> Dict[str, Any]:
-    # Try to extract JSON between first { and last }
     try:
         start = text.find('{')
         end = text.rfind('}')
@@ -282,7 +278,6 @@ def _force_extract_json(text: str) -> Dict[str, Any]:
 
 @api.post('/ai/estimate-calories')
 async def estimate_calories(payload: AIRequest):
-    # Simulated deterministic response for testing when no key or simulate=true
     # Use Emergent LLM Key by default if available; still allow simulate toggle
     if payload.simulate or not (payload.api_key or EMERGENT_LLM_KEY):
         sample = {
@@ -299,33 +294,125 @@ async def estimate_calories(payload: AIRequest):
 
     key = payload.api_key or EMERGENT_LLM_KEY
     try:
-        # Initialize chat per session
         chat = LlmChat(api_key=key, session_id=str(uuid.uuid4()), system_message=SYSTEM_PROMPT).with_model("openai", "gpt-4o")
-
-        files: List[ImageContent] = []
-        for img in payload.images:
-            # ImageContent expects base64 data
-            files.append(ImageContent(image_base64=img.data))
-
+        files: List[ImageContent] = [ImageContent(image_base64=img.data) for img in payload.images]
         user_text = payload.message or "Estimate calories for the attached food image(s)."
         umsg = UserMessage(text=user_text, file_contents=files)
         resp = await chat.send_message(umsg)
-
-        # resp is usually text. Attempt JSON parse
         raw_text = str(resp)
         try:
             parsed = json.loads(raw_text)
         except Exception:
             parsed = _force_extract_json(raw_text)
-
-        # Validate minimal fields
         if not isinstance(parsed, dict) or 'total_calories' not in parsed:
             parsed = _force_extract_json(raw_text)
-
         return JSONResponse(content=parsed)
     except Exception as e:
         logger.exception("LLM estimation failed")
         raise HTTPException(status_code=500, detail=f"AI Estimation failed: {e}")
+
+
+# ---- Meals (Day Log) ----
+class MealItem(BaseModel):
+    name: str
+    quantity_units: str
+    calories: float
+    confidence: float
+
+
+class MealCreate(BaseModel):
+    total_calories: float = Field(ge=0)
+    items: List[MealItem]
+    notes: Optional[str] = None
+    image_base64: Optional[str] = None
+    captured_at: Optional[str] = None  # ISO string, optional
+
+
+class MealOut(BaseModel):
+    id: str
+    total_calories: float
+    items: List[MealItem]
+    notes: Optional[str]
+    image_base64: Optional[str]
+    created_at: str
+
+
+class MealsForDateResponse(BaseModel):
+    date: str
+    meals: List[MealOut]
+    daily_total: float
+
+
+def _today_range_utc(date_str: Optional[str] = None):
+    # date_str is YYYY-MM-DD in user's local (assume UTC for MVP)
+    if date_str:
+        try:
+            y, m, d = [int(x) for x in date_str.split('-')]
+            start = datetime(y, m, d, 0, 0, 0, tzinfo=timezone.utc)
+        except Exception:
+            start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    end = start + timedelta(days=1)
+    return start, end
+
+
+@api.post('/meals', response_model=MealOut)
+async def add_meal(meal: MealCreate, user=Depends(get_current_user)):
+    meal_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    created_at = now if not meal.captured_at else datetime.fromisoformat(meal.captured_at)
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    doc = {
+        "_id": meal_id,
+        "user_id": user['_id'],
+        "total_calories": float(meal.total_calories),
+        "items": [i.model_dump() for i in meal.items],
+        "notes": meal.notes,
+        "image_base64": meal.image_base64,  # base64 per guideline
+        "created_at": created_at
+    }
+    await db.meals.insert_one(doc)
+    return MealOut(
+        id=meal_id,
+        total_calories=doc['total_calories'],
+        items=[MealItem(**i) for i in doc['items']],
+        notes=doc['notes'],
+        image_base64=doc['image_base64'],
+        created_at=doc['created_at'].isoformat()
+    )
+
+
+@api.get('/meals', response_model=MealsForDateResponse)
+async def list_meals(date: Optional[str] = Query(default=None, description="YYYY-MM-DD"), user=Depends(get_current_user)):
+    start, end = _today_range_utc(date)
+    cursor = db.meals.find({
+        "user_id": user['_id'],
+        "created_at": {"$gte": start, "$lt": end}
+    }).sort("created_at", 1)
+    meals = []
+    total = 0.0
+    async for m in cursor:
+        total += float(m.get('total_calories', 0))
+        meals.append(MealOut(
+            id=m['_id'],
+            total_calories=float(m.get('total_calories', 0)),
+            items=[MealItem(**i) for i in m.get('items', [])],
+            notes=m.get('notes'),
+            image_base64=m.get('image_base64'),
+            created_at=m.get('created_at').isoformat() if m.get('created_at') else datetime.now(timezone.utc).isoformat()
+        ))
+    date_out = (start.date()).isoformat()
+    return MealsForDateResponse(date=date_out, meals=meals, daily_total=round(total, 2))
+
+
+@api.delete('/meals/{meal_id}')
+async def delete_meal(meal_id: str, user=Depends(get_current_user)):
+    res = await db.meals.delete_one({"_id": meal_id, "user_id": user['_id']})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Meal not found")
+    return {"deleted": True}
 
 
 # Include router

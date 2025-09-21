@@ -195,7 +195,57 @@ function ProfilePanel({ auth }) {
   );
 }
 
-function ScannerPanel() {
+function DayLogPanel({ auth, refreshKey }) {
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0,10));
+  const [meals, setMeals] = useState([]);
+  const [total, setTotal] = useState(0);
+  const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
+
+  const fetchMeals = async () => {
+    if (!auth.token) { setMeals([]); setTotal(0); return; }
+    try {
+      const res = await axios.get(`${API}/meals`, { params: { date }, headers });
+      setMeals(res.data.meals || []);
+      setTotal(res.data.daily_total || 0);
+    } catch (e) {
+      setMeals([]); setTotal(0);
+    }
+  };
+
+  useEffect(()=>{ fetchMeals(); }, [auth.token, date, refreshKey]);
+
+  return (
+    <div className="card">
+      <h3 style={{marginTop:0}}>Day Log</h3>
+      <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
+        <input className="input" type="date" value={date} onChange={e=>setDate(e.target.value)} />
+        <div className="small">Total: <b>{Math.round(total)}</b> kcal</div>
+      </div>
+      <div className="items-list" style={{marginTop:8}}>
+        {meals.length === 0 && <div className="small">No entries for this day.</div>}
+        {meals.map((m) => (
+          <div key={m.id} className="item-row" style={{alignItems:'flex-start'}}>
+            <div>
+              <div><b>{Math.round(m.total_calories)}</b> kcal</div>
+              <div className="small">{new Date(m.created_at).toLocaleTimeString()}</div>
+              {m.notes && <div className="small">{m.notes}</div>}
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div className="small">Items</div>
+              <div className="small">
+                {m.items.map((it, idx)=> (
+                  <div key={idx}>{it.name} • {it.quantity_units} • {Math.round(it.calories)} kcal</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ScannerPanel({ auth, onSaved }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [streaming, setStreaming] = useState(false);
@@ -210,7 +260,6 @@ function ScannerPanel() {
   }); // enabled until user adds key
   const [apiKey, setApiKey] = useState('');
 
-  // Always render video/canvas in DOM per instruction
   useEffect(()=>{
     // nothing initially
   }, []);
@@ -251,7 +300,7 @@ function ScannerPanel() {
     setSnapshot(base64);
   };
 
-  const sendEstimate = async () => {
+  const estimate = async () => {
     setLoading(true); setError(''); setResult(null);
     try {
       const payload = { message: desc, images: [{ data: snapshot, mime_type: 'image/jpeg', filename: 'capture.jpg' }], simulate, api_key: apiKey || undefined };
@@ -260,6 +309,24 @@ function ScannerPanel() {
     } catch (e) {
       setError(e?.response?.data?.detail || e.message);
     } finally { setLoading(false); }
+  };
+
+  const saveLog = async () => {
+    if (!auth.token) { setError('Login required to save'); return; }
+    if (!result) { setError('No estimate to save'); return; }
+    try {
+      const headers = { Authorization: `Bearer ${auth.token}` };
+      const payload = {
+        total_calories: result.total_calories,
+        items: result.items,
+        notes: desc || result.notes,
+        image_base64: snapshot,
+      };
+      await axios.post(`${API}/meals`, payload, { headers });
+      onSaved && onSaved();
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message);
+    }
   };
 
   const onFile = async (e) => {
@@ -305,7 +372,7 @@ function ScannerPanel() {
             value={desc} onChange={e=>setDesc(e.target.value)} />
         </div>
         <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
-          <button className="btn-primary" disabled={!snapshot || loading} onClick={sendEstimate}>{loading? 'Estimating...':'Estimate Calories'}</button>
+          <button className="btn-primary" disabled={!snapshot || loading} onClick={estimate}>{loading? 'Estimating...':'Estimate Calories'}</button>
           <label className="small" style={{display:'inline-flex', alignItems:'center', gap:6}}>
             <input type="checkbox" checked={simulate} onChange={e=>{setSimulate(e.target.checked); localStorage.setItem('simulate_mode', String(e.target.checked));}} /> Test mode (no API key)
           </label>
@@ -316,7 +383,7 @@ function ScannerPanel() {
         {error && <div className="error" style={{marginTop:8}}>{error}</div>}
         {result && (
           <div className="card" style={{marginTop:12}}>
-            <div className="small">Confidence: {(result.confidence*100).toFixed(0)}%</div>
+            <div className="small">Confidence: {result.confidence !== undefined ? (result.confidence*100).toFixed(0) : '—'}%</div>
             <h4 style={{margin:'8px 0'}}>Total: {Math.round(result.total_calories)} kcal</h4>
             <div className="items-list">
               {result.items?.map((it, idx)=> (
@@ -327,6 +394,11 @@ function ScannerPanel() {
               ))}
             </div>
             {result.notes && <div className="small" style={{marginTop:8}}>{result.notes}</div>}
+            {auth.token && (
+              <div style={{marginTop:8}}>
+                <button className="btn-secondary" onClick={saveLog}>Save to Day Log</button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -336,9 +408,9 @@ function ScannerPanel() {
 
 export default function App(){
   const auth = useAuth();
+  const [logRefreshKey, setLogRefreshKey] = useState(0);
 
   useEffect(()=>{
-    // basic connectivity check
     (async ()=>{
       try { await axios.get(`${API}/`); } catch (e) { /* ignore in UI */ }
     })();
@@ -358,7 +430,10 @@ export default function App(){
           <div><ProfilePanel auth={auth} /></div>
         </div>
         <div style={{marginTop:16}}>
-          <ScannerPanel />
+          <ScannerPanel auth={auth} onSaved={() => setLogRefreshKey(k=>k+1)} />
+        </div>
+        <div style={{marginTop:16}}>
+          <DayLogPanel auth={auth} refreshKey={logRefreshKey} />
         </div>
         <div className="footer-space" />
       </Section>
