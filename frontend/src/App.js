@@ -462,6 +462,8 @@ function ScannerPanel({ auth, onSaved }) {
 export default function App(){
   const auth = useAuth();
   const [logRefreshKey, setLogRefreshKey] = useState(0);
+  const [optimisticTotals, setOptimisticTotals] = useState(null); // {date, addCalories}
+
 
   useEffect(()=>{
     (async ()=>{
