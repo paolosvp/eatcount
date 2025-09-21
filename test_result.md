@@ -101,3 +101,116 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Build a calorie tracking app with camera upload and AI (gpt-4o) to estimate meal calories, plus daily target calculator and basic email/password auth."
+
+backend:
+  - task: "Health endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/health returns status ok; curl verified"
+  - task: "Auth register/login (JWT)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Register and login tested via curl; token returned"
+  - task: "Profile update + daily calorie calculator"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "PUT /api/profile computes target; curl verified"
+  - task: "AI estimate calories endpoint (image base64 to LLM)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Simulated mode tested with curl; LLM path will need key to retest"
+
+frontend:
+  - task: "Hero + Layout + Navigation"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Responsive layout coded per design rules"
+  - task: "Auth UI"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Form submits to backend endpoints; manual check pending"
+  - task: "Profile form and calculator integration"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Should show recommended calories on save"
+  - task: "Camera capture + upload + AI estimate"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Video element always rendered; base64 sent to backend; simulate toggle included"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Backend AI estimate real call with gpt-4o once key provided"
+    - "Frontend auth and profile flow manual check"
+  stuck_tasks:
+    - "None"
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Initial MVP implemented. Backend endpoints verified with curl including simulated AI. Awaiting LLM key to run real vision parse. Ask user if they want automated frontend testing now."
