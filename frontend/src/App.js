@@ -195,7 +195,7 @@ function ProfilePanel({ auth }) {
   );
 }
 
-function DayLogPanel({ auth, refreshKey }) {
+function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0,10));
   const [meals, setMeals] = useState([]);
   const [total, setTotal] = useState(0);
