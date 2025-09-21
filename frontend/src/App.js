@@ -196,7 +196,12 @@ function ProfilePanel({ auth }) {
 }
 
 function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0,10));
+  const localDateStr = (d = new Date()) => {
+    const tz = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - tz * 60000);
+    return local.toISOString().slice(0, 10);
+  };
+  const [date, setDate] = useState(() => localDateStr());
   const [meals, setMeals] = useState([]);
   const [total, setTotal] = useState(0);
   const [target, setTarget] = useState(null);
