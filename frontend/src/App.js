@@ -195,7 +195,7 @@ function ProfilePanel({ auth }) {
   );
 }
 
-function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
+function DayLogPanel({ auth, refreshKey }) {
   const localDateStr = (d = new Date()) => {
     const tz = d.getTimezoneOffset();
     const local = new Date(d.getTime() - tz * 60000);
