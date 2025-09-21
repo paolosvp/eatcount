@@ -485,7 +485,7 @@ export default function App(){
           <div><ProfilePanel auth={auth} /></div>
         </div>
         <div style={{marginTop:16}}>
-          <ScannerPanel auth={auth} onSaved={() => setLogRefreshKey(k=>k+1)} />
+          <ScannerPanel auth={auth} onSaved={(saved) => { setLogRefreshKey(k=>k+1); }} />
         </div>
         <div style={{marginTop:16}}>
           <DayLogPanel auth={auth} refreshKey={logRefreshKey} />
