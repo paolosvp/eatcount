@@ -1,38 +1,61 @@
-.App {
-    text-align: center;
+/* Design tokens per guideline */
+:root {
+  --bg-page: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-section: rgba(243, 234, 255, 0.3);
+  --text-primary: rgb(24, 24, 24);
+  --text-secondary: rgb(112, 112, 112);
+  --text-muted: rgb(143, 143, 143);
+  --border-light: rgba(24, 24, 24, 0.1);
+  --border-medium: rgba(24, 24, 24, 0.2);
+  --border-strong: rgba(24, 24, 24, 0.3);
+  --brand-primary: rgb(0, 128, 255);
+  --brand-hover: rgb(0, 153, 255);
+  --brand-active: rgb(0, 102, 204);
+  --gradient-hero: linear-gradient(135deg, rgba(243,234,255,0.8) 0%, rgba(255,232,240,0.8) 25%, rgba(232,244,255,0.8) 50%, rgba(255,232,213,0.8) 75%, rgba(243,234,255,0.8) 100%);
+  --gradient-button: linear-gradient(168deg, rgb(67,67,67) -63%, rgb(0,0,0) 100%);
 }
 
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
-}
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&display=swap');
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
-}
+body { font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; color: var(--text-primary); background: var(--bg-page); margin:0; }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
-}
+.btn-primary { background: var(--gradient-button); color: #fff; border: none; border-radius: 100px; padding: 14px 24px; font-weight: 600; font-size: 16px; cursor: pointer; transition: all .2s ease; min-height: 48px; display:inline-flex; align-items:center; justify-content:center; box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.btn-primary:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(0,0,0,.15); }
+.btn-primary:active { transform: scale(0.96); }
 
-.App-link {
-    color: #61dafb;
-}
+.btn-secondary { background: rgba(255,255,255,.2); color: var(--text-primary); border: 1px solid rgba(24,24,24,.15); border-radius: 100px; padding: 14px 24px; font-weight:600; min-height:48px; backdrop-filter: blur(2px); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.btn-secondary:hover { background: rgba(255,255,255,.3); transform: scale(1.02); }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
+.hero-section { background: var(--gradient-hero); min-height: 60vh; display:flex; align-items:center; justify-content:center; text-align:center; padding: 48px 16px; }
+.hero-title { font-family: 'Satoshi'; font-weight: 700; font-size: clamp(32px, 5vw, 56px); margin: 0 0 12px; }
+.hero-subtitle { color: var(--text-secondary); font-size: clamp(16px, 2.5vw, 20px); margin: 0 0 24px; }
+.container { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+
+.card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+.card + .card { margin-top: 16px; }
+.input { width: 100%; border:1px solid var(--border-medium); border-radius: 10px; padding: 12px 14px; outline:none; font-size: 14px; }
+.input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(0,128,255,.12); }
+.label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; display:block; }
+.row { display:grid; grid-template-columns: 1fr; gap:12px; }
+@media (min-width: 810px){ .row-2 { grid-template-columns: 1fr 1fr; } .row-3 { grid-template-columns: 1fr 1fr 1fr; } }
+
+.nav { display:flex; gap:8px; align-items:center; justify-content:center; padding: 12px; border-bottom: 1px solid var(--border-light); }
+.nav-link { color: var(--text-primary); text-decoration:none; font-weight:600; padding: 10px 14px; border-radius:8px; }
+.nav-link.active, .nav-link:hover { background: rgba(24,24,24,.05); color: var(--brand-primary); }
+
+.small { font-size: 12px; color: var(--text-muted); }
+.error { color:#b00020; font-size: 13px; }
+.success { color:#0a7d00; font-size: 13px; }
+
+/* Camera */
+.camera-wrapper { display:flex; flex-direction: column; gap: 12px; }
+.video-el { width:100%; max-width: 520px; border-radius:12px; border:1px solid var(--border-light); background:#000; }
+.hidden-video { display:none; } /* Keep in DOM to satisfy ref availability */
+.preview-img { max-width: 100%; border-radius: 12px; border:1px solid var(--border-light); }
+
+.items-list { display:flex; flex-direction: column; gap: 8px; }
+.item-row { display:flex; justify-content: space-between; align-items:center; font-size:14px; padding:8px 10px; border:1px solid var(--border-light); border-radius:8px; }
+
+.footer-space { height: 24px; }

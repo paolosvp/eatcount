@@ -1,54 +1,360 @@
-import { useEffect } from "react";
-import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import React, { useEffect, useRef, useState } from 'react';
+import './App.css';
+import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL; // do not hardcode
 const API = `${BACKEND_URL}/api`;
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
+function useAuth() {
+  const [token, setToken] = useState(localStorage.getItem('token') || '');
+  const [email, setEmail] = useState(localStorage.getItem('email') || '');
+
+  const save = (t, e) => {
+    localStorage.setItem('token', t);
+    localStorage.setItem('email', e || email);
+    setToken(t);
+    setEmail(e || email);
   };
+  const clear = () => { localStorage.removeItem('token'); localStorage.removeItem('email'); setToken(''); setEmail(''); };
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
+  return { token, email, save, clear };
+}
 
+function Section({ children }) {
+  return <div className="container" style={{marginTop: 24}}>{children}</div>;
+}
+
+function Hero() {
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
-
-function App() {
-  return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+    <div className="hero-section">
+      <div className="container">
+        <h1 className="hero-title">Snap. Estimate. Stay on Track.</h1>
+        <p className="hero-subtitle">Capture your meal and get an instant calorie estimate. Set a daily target based on your profile.</p>
+        <div style={{display:'flex', gap:12, justifyContent:'center'}}>
+          <a className="btn-primary" href="#scan">Scan a Meal</a>
+          <a className="btn-secondary" href="#profile">Set Daily Target</a>
+        </div>
+      </div>
     </div>
   );
 }
 
-export default App;
+function AuthPanel({ auth }) {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [mode, setMode] = useState('login');
+  const [msg, setMsg] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault(); setMsg('');
+    try {
+      const url = mode === 'login' ? `${API}/auth/login` : `${API}/auth/register`;
+      const res = await axios.post(url, form);
+      auth.save(res.data.access_token, form.email);
+      setMsg('Success');
+    } catch (err) {
+      setMsg(err?.response?.data?.detail || err.message);
+    }
+  };
+
+  return (
+    <div className="card">
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <h3 style={{margin:0}}>Account</h3>
+        {auth.token ? <button className="btn-secondary" onClick={auth.clear}>Logout</button> : null}
+      </div>
+      {!auth.token && (
+        <form onSubmit={submit} style={{marginTop:12}}>
+          <div className="row">
+            <label className="label">Email</label>
+            <input className="input" type="email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required />
+          </div>
+          <div className="row" style={{marginTop:8}}>
+            <label className="label">Password</label>
+            <input className="input" type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required minLength={6} />
+          </div>
+          <div style={{display:'flex', gap:8, marginTop:12}}>
+            <button className="btn-primary" type="submit">{mode==='login'?'Login':'Register'}</button>
+            <button className="btn-secondary" type="button" onClick={()=>setMode(mode==='login'?'register':'login')}>
+              Switch to {mode==='login'?'Register':'Login'}
+            </button>
+          </div>
+          {msg && <div style={{marginTop:8}} className={msg==='Success'? 'success':'error'}>{msg}</div>}
+        </form>
+      )}
+      {auth.token && <div className="small">Logged in as {auth.email}</div>}
+    </div>
+  );
+}
+
+function ProfilePanel({ auth }) {
+  const [profile, setProfile] = useState(null);
+  const [form, setForm] = useState({ height_cm:'', weight_kg:'', age:'', gender:'male', activity_level:'light', goal:'maintain', goal_intensity:'moderate', goal_weight_kg:'' });
+  const [msg, setMsg] = useState('');
+
+  const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
+
+  const fetchMe = async () => {
+    if (!auth.token) return;
+    try {
+      const res = await axios.get(`${API}/profile/me`, { headers });
+      setProfile(res.data.profile);
+    } catch (e) { /* ignore */ }
+  };
+
+  useEffect(()=>{ fetchMe(); }, [auth.token]);
+
+  const submit = async (e) => {
+    e.preventDefault(); setMsg('');
+    if (!auth.token) { setMsg('Login required'); return; }
+    try {
+      const payload = {
+        ...form,
+        height_cm: parseFloat(form.height_cm),
+        weight_kg: parseFloat(form.weight_kg),
+        age: parseInt(form.age, 10),
+        goal_weight_kg: form.goal_weight_kg? parseFloat(form.goal_weight_kg): null
+      };
+      const res = await axios.put(`${API}/profile`, payload, { headers });
+      setProfile(res.data.profile);
+      setMsg('Saved');
+    } catch (err) {
+      setMsg(err?.response?.data?.detail || err.message);
+    }
+  };
+
+  return (
+    <div id="profile" className="card">
+      <h3 style={{marginTop:0}}>Daily Target</h3>
+      <form onSubmit={submit}>
+        <div className="row row-3">
+          <div>
+            <label className="label">Height (cm)</label>
+            <input className="input" value={form.height_cm} onChange={e=>setForm({...form, height_cm: e.target.value})} required type="number" step="0.1" />
+          </div>
+          <div>
+            <label className="label">Weight (kg)</label>
+            <input className="input" value={form.weight_kg} onChange={e=>setForm({...form, weight_kg: e.target.value})} required type="number" step="0.1" />
+          </div>
+          <div>
+            <label className="label">Age</label>
+            <input className="input" value={form.age} onChange={e=>setForm({...form, age: e.target.value})} required type="number" />
+          </div>
+          <div>
+            <label className="label">Gender</label>
+            <select className="input" value={form.gender} onChange={e=>setForm({...form, gender:e.target.value})}>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Activity</label>
+            <select className="input" value={form.activity_level} onChange={e=>setForm({...form, activity_level:e.target.value})}>
+              <option value="sedentary">Sedentary</option>
+              <option value="light">Light</option>
+              <option value="moderate">Moderate</option>
+              <option value="very">Very</option>
+              <option value="extra">Extra</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Goal</label>
+            <select className="input" value={form.goal} onChange={e=>setForm({...form, goal:e.target.value})}>
+              <option value="lose">Lose</option>
+              <option value="maintain">Maintain</option>
+              <option value="gain">Gain</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Intensity</label>
+            <select className="input" value={form.goal_intensity} onChange={e=>setForm({...form, goal_intensity:e.target.value})}>
+              <option value="mild">Mild</option>
+              <option value="moderate">Moderate</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Goal Weight (kg)</label>
+            <input className="input" value={form.goal_weight_kg} onChange={e=>setForm({...form, goal_weight_kg:e.target.value})} type="number" step="0.1" />
+          </div>
+        </div>
+        <div style={{marginTop: 12, display:'flex', gap:8}}>
+          <button className="btn-primary" type="submit">Save &amp; Compute</button>
+          {profile && <div className="small">Recommended: <b>{profile.recommended_daily_calories}</b> kcal/day</div>}
+        </div>
+        <div className="small" style={{marginTop:8}}>{profile? 'Last updated: '+ (profile.updated_at || ''): ''}</div>
+        {profile && (
+          <div className="card" style={{marginTop:12}}>
+            <div className="small">Summary</div>
+            <div style={{fontSize:16}}><b>{profile.recommended_daily_calories}</b> kcal/day target</div>
+          </div>
+        )}
+        {msg && <div style={{marginTop:8}} className={msg==='Saved'?'success':'error'}>{msg}</div>}
+      </form>
+    </div>
+  );
+}
+
+function ScannerPanel() {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [streaming, setStreaming] = useState(false);
+  const [snapshot, setSnapshot] = useState('');
+  const [desc, setDesc] = useState('');
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [simulate, setSimulate] = useState(true); // enabled until user adds key
+
+  // Always render video/canvas in DOM per instruction
+  useEffect(()=>{
+    // nothing initially
+  }, []);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        setStreaming(true);
+      }
+    } catch (e) {
+      setError('Camera access denied or unavailable');
+    }
+  };
+
+  const stopCamera = () => {
+    const v = videoRef.current;
+    if (v && v.srcObject) {
+      const tracks = v.srcObject.getTracks();
+      tracks.forEach(t => t.stop());
+      v.srcObject = null;
+    }
+    setStreaming(false);
+  };
+
+  const capture = () => {
+    const v = videoRef.current;
+    const c = canvasRef.current;
+    if (!v || !c) return;
+    const w = v.videoWidth || 640; const h = v.videoHeight || 480;
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(v, 0, 0, w, h);
+    const dataUrl = c.toDataURL('image/jpeg', 0.9);
+    const base64 = dataUrl.split(',')[1];
+    setSnapshot(base64);
+  };
+
+  const sendEstimate = async () => {
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const payload = { message: desc, images: [{ data: snapshot, mime_type: 'image/jpeg', filename: 'capture.jpg' }], simulate };
+      const res = await axios.post(`${API}/ai/estimate-calories`, payload);
+      setResult(res.data);
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message);
+    } finally { setLoading(false); }
+  };
+
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const b64 = String(dataUrl).split(',')[1];
+      setSnapshot(b64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div id="scan" className="card">
+      <h3 style={{marginTop:0}}>Scan a Meal</h3>
+      <div className="camera-wrapper">
+        <video ref={videoRef} className={streaming? 'video-el':'hidden-video'} playsInline muted></video>
+        <canvas ref={canvasRef} className="hidden-video"></canvas>
+        <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+          {!streaming ? (
+            <button className="btn-primary" onClick={startCamera}>Start Camera</button>
+          ) : (
+            <>
+              <button className="btn-primary" onClick={capture}>Capture</button>
+              <button className="btn-secondary" onClick={stopCamera}>Stop</button>
+            </>
+          )}
+          <label className="btn-secondary" style={{cursor:'pointer'}}>
+            Upload Image
+            <input type="file" accept="image/*" onChange={onFile} style={{display:'none'}} />
+          </label>
+        </div>
+        {snapshot && (
+          <div>
+            <img className="preview-img" src={`data:image/jpeg;base64,${snapshot}`} alt="preview" />
+          </div>
+        )}
+        <div className="row" style={{marginTop:8}}>
+          <label className="label">Add a description (optional)</label>
+          <textarea className="input" rows={3} placeholder="e.g. No dressing, medium portion"
+            value={desc} onChange={e=>setDesc(e.target.value)} />
+        </div>
+        <div style={{display:'flex', gap:8, alignItems:'center'}}>
+          <button className="btn-primary" disabled={!snapshot || loading} onClick={sendEstimate}>{loading? 'Estimating...':'Estimate Calories'}</button>
+          <label className="small" style={{display:'inline-flex', alignItems:'center', gap:6}}>
+            <input type="checkbox" checked={simulate} onChange={e=>setSimulate(e.target.checked)} /> Test mode (no API key)
+          </label>
+        </div>
+        {error && <div className="error" style={{marginTop:8}}>{error}</div>}
+        {result && (
+          <div className="card" style={{marginTop:12}}>
+            <div className="small">Confidence: {(result.confidence*100).toFixed(0)}%</div>
+            <h4 style={{margin:'8px 0'}}>Total: {Math.round(result.total_calories)} kcal</h4>
+            <div className="items-list">
+              {result.items?.map((it, idx)=> (
+                <div className="item-row" key={idx}>
+                  <div>{it.name} • {it.quantity_units}</div>
+                  <div><b>{Math.round(it.calories)}</b> kcal</div>
+                </div>
+              ))}
+            </div>
+            {result.notes && <div className="small" style={{marginTop:8}}>{result.notes}</div>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function App(){
+  const auth = useAuth();
+
+  useEffect(()=>{
+    // basic connectivity check
+    (async ()=>{
+      try { await axios.get(`${API}/`); } catch (e) { /* ignore in UI */ }
+    })();
+  }, []);
+
+  return (
+    <>
+      <Hero />
+      <Section>
+        <div className="nav">
+          <a className="nav-link" href="#scan">Scan</a>
+          <a className="nav-link" href="#profile">Profile</a>
+          <a className="nav-link" href="#account">Account</a>
+        </div>
+        <div className="row row-2">
+          <div id="account"><AuthPanel auth={auth} /></div>
+          <div><ProfilePanel auth={auth} /></div>
+        </div>
+        <div style={{marginTop:16}}>
+          <ScannerPanel />
+        </div>
+        <div className="footer-space" />
+      </Section>
+    </>
+  );
+}
