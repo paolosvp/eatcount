@@ -304,7 +304,6 @@ async def estimate_calories(payload: AIRequest):
         effective_key = provided_key
         key_mode = "provided"
     else:
-        # No or empty key from client → try Emergent LLM Key
         emergent = (EMERGENT_LLM_KEY or "").strip()
         if not emergent:
             raise HTTPException(status_code=400, detail="No API key available. Provide api_key or configure Emergent LLM Key.")
