@@ -338,9 +338,17 @@ function ScannerPanel({ auth, onSaved }) {
   const estimate = async () => {
     setLoading(true); setError(''); setResult(null);
     try {
-      const payload = { message: desc, images: [{ data: snapshot, mime_type: 'image/jpeg', filename: 'capture.jpg' }], simulate, api_key: apiKey || undefined };
+      const payload = { message: desc, images: [{ data: snapshot, mime_type: 'image/jpeg', filename: 'capture.jpg' }], simulate, api_key: apiKey !== '' ? apiKey : undefined };
       const res = await axios.post(`${API}/ai/estimate-calories`, payload);
       setResult(res.data);
+      // Key mode banner based on engine_info
+      if (res.data?.engine_info?.key_mode === 'provided') {
+        console.log('Using provided API key');
+      } else if (res.data?.engine_info?.key_mode === 'emergent') {
+        console.log('Using Emergent LLM Key');
+      } else if (simulate) {
+        console.log('Simulated mode');
+      }
     } catch (e) {
       setError(e?.response?.data?.detail || e.message);
     } finally { setLoading(false); }
