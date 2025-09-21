@@ -306,10 +306,8 @@ function ScannerPanel() {
           <label className="small" style={{display:'inline-flex', alignItems:'center', gap:6}}>
             <input type="checkbox" checked={simulate} onChange={e=>setSimulate(e.target.checked)} /> Test mode (no API key)
           </label>
-          {!simulate && (
-            <input className="input" style={{maxWidth:300}} type="password" placeholder="Enter API key or leave blank to use Emergent LLM Key"
-              value={apiKey} onChange={e=>setApiKey(e.target.value)} />
-          )}
+          <input className="input" style={{maxWidth:300, display: simulate ? 'none' : 'block'}} type="password" placeholder="Enter API key or leave blank to use Emergent LLM Key"
+            value={apiKey} onChange={e=>setApiKey(e.target.value)} />
         </div>
         {error && <div className="error" style={{marginTop:8}}>{error}</div>}
         {result && (
