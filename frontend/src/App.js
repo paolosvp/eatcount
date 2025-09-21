@@ -251,7 +251,7 @@ function ScannerPanel() {
   const sendEstimate = async () => {
     setLoading(true); setError(''); setResult(null);
     try {
-      const payload = { message: desc, images: [{ data: snapshot, mime_type: 'image/jpeg', filename: 'capture.jpg' }], simulate };
+      const payload = { message: desc, images: [{ data: snapshot, mime_type: 'image/jpeg', filename: 'capture.jpg' }], simulate, api_key: apiKey || undefined };
       const res = await axios.post(`${API}/ai/estimate-calories`, payload);
       setResult(res.data);
     } catch (e) {
