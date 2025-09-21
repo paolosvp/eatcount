@@ -260,6 +260,11 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
     if (!auth.token) return;
     try {
       await axios.delete(`${API}/meals/${id}`, { headers });
+      // Also remove from pending in case it's still there
+      setPending(p => p.filter(x => x.id !== id));
+      // Remove from view immediately
+      setMeals(m => m.filter(x => x.id !== id));
+      // Re-fetch to sync totals from server
       await fetchMeals();
     } catch (e) { /* ignore */ }
   };
