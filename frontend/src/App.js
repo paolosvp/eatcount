@@ -258,7 +258,11 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
     } catch (e) { /* ignore */ }
   };
 
-  const pct = target ? Math.min(100, Math.round((total/target)*100)) : null;
+  // Compose pending + server meals for display; adjust total accordingly to avoid flicker
+  const pendingTotal = pending.reduce((acc, m) => acc + Number(m.total_calories||0), 0);
+  const displayMeals = [...pending, ...meals];
+  const displayTotal = Math.round((Number(total||0) + pendingTotal) * 100) / 100;
+  const pct = target ? Math.min(100, Math.round((displayTotal/target)*100)) : null;
 
   return (
     <div className="card">
