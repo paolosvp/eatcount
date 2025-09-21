@@ -152,6 +152,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "Comprehensive backend testing completed. All APIs working correctly: GET /api/health returns proper status, POST /api/auth/register and /api/auth/login return valid JWT tokens, PUT /api/profile calculates daily calories correctly (tested with realistic data), POST /api/ai/estimate-calories with simulate=true returns proper JSON structure with total_calories, items array, confidence scores. All endpoints use correct /api prefix and MongoDB connectivity confirmed. Backend logs show all 200 OK responses with no errors."
+      - working: true
+        agent: "testing"
+        comment: "LIVE AI ESTIMATION VERIFIED: POST /api/ai/estimate-calories with simulate=false and empty api_key successfully uses emergent LLM key (EMERGENT_LLM_KEY=sk-emergent-772AdD827522fCa268). Response includes engine_info.key_mode=emergent confirming proper key policy implementation. Real GPT-4o integration working with timezone and key policy patch."
 
 frontend:
   - task: "Hero + Layout + Navigation"
