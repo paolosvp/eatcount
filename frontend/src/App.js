@@ -207,7 +207,7 @@ function DayLogPanel({ auth, refreshKey }) {
     if (!auth.token) { setMeals([]); setTotal(0); setTarget(null); return; }
     try {
       const [mealsRes, profileRes, streakRes] = await Promise.all([
-        axios.get(`${API}/meals`, { params: { date }, headers }),
+        axios.get(`${API}/meals`, { params: { date, tz_offset_minutes: new Date().getTimezoneOffset() }, headers }),
         axios.get(`${API}/profile/me`, { headers }),
         axios.get(`${API}/meals/stats`, { headers })
       ]);
