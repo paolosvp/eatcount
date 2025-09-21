@@ -204,7 +204,10 @@ function ScannerPanel() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [simulate, setSimulate] = useState(true); // enabled until user adds key
+  const [simulate, setSimulate] = useState(() => {
+    const saved = localStorage.getItem('simulate_mode');
+    return saved ? saved === 'true' : true; // default ON
+  }); // enabled until user adds key
   const [apiKey, setApiKey] = useState('');
 
   // Always render video/canvas in DOM per instruction
