@@ -368,22 +368,23 @@ class MealsForDateResponse(BaseModel):
 
 def _day_range_local_to_utc(date_str: Optional[str], tz_offset_minutes: int):
     """
-    Convert a local calendar day (date_str) + client's timezone offset (in minutes)
-    into UTC [start,end) bounds. JS getTimezoneOffset returns minutes between local and UTC.
-    UTC = local + offset_minutes.
+    Convert a local calendar day to UTC [start, end).
+    JS getTimezoneOffset() returns minutes to add to local time to get UTC (local - offset = UTC).
+    So UTC_start = local_start - offset_minutes.
     """
     if date_str:
         try:
             y, m, d = [int(x) for x in date_str.split('-')]
-            local_start = datetime(y, m, d, 0, 0, 0)  # naive local
+            local_start = datetime(y, m, d, 0, 0, 0)
         except Exception:
-            now_local = datetime.utcnow()  # fallback
-            local_start = datetime(now_local.year, now_local.month, now_local.day, 0, 0, 0)
+            now = datetime.utcnow()
+            local_start = datetime(now.year, now.month, now.day, 0, 0, 0)
     else:
-        now_local = datetime.utcnow()
-        local_start = datetime(now_local.year, now_local.month, now_local.day, 0, 0, 0)
+        now = datetime.utcnow()
+        local_start = datetime(now.year, now.month, now.day, 0, 0, 0)
 
-    start_utc = (local_start + timedelta(minutes=tz_offset_minutes)).replace(tzinfo=timezone.utc)
+    # UTC = local - offset_minutes
+    start_utc = (local_start - timedelta(minutes=tz_offset_minutes)).replace(tzinfo=timezone.utc)
     end_utc = start_utc + timedelta(days=1)
     return start_utc, end_utc
 
