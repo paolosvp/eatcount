@@ -283,6 +283,7 @@ def _force_extract_json(text: str) -> Dict[str, Any]:
 @api.post('/ai/estimate-calories')
 async def estimate_calories(payload: AIRequest):
     # Simulated deterministic response for testing when no key or simulate=true
+    # Use Emergent LLM Key by default if available; still allow simulate toggle
     if payload.simulate or not (payload.api_key or EMERGENT_LLM_KEY):
         sample = {
             "total_calories": 420,
