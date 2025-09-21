@@ -479,7 +479,7 @@ function ScannerPanel({ auth, onSaved }) {
 export default function App(){
   const auth = useAuth();
   const [logRefreshKey, setLogRefreshKey] = useState(0);
-  const [optimisticTotals, setOptimisticTotals] = useState(null); // {date, addCalories}
+  const [optimisticSave, setOptimisticSave] = useState(null); // last saved meal
 
 
   useEffect(()=>{
