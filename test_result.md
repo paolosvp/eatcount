@@ -165,39 +165,51 @@ frontend:
       - working: true
         agent: "main"
         comment: "Responsive layout coded per design rules"
+      - working: true
+        agent: "testing"
+        comment: "Comprehensive UI testing completed. Hero section displays correctly with title 'Snap. Estimate. Stay on Track.' and navigation buttons are visible and functional. Layout is responsive and all navigation links work properly."
   - task: "Auth UI"
     implemented: true
     working: true
     file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Form submits to backend endpoints; manual check pending"
+      - working: true
+        agent: "testing"
+        comment: "Authentication system working correctly. Registration with unique email/password successfully creates account, stores JWT token in localStorage, and displays logged-in status. Login/logout functionality verified. Form validation and error handling working properly."
   - task: "Profile form and calculator integration"
     implemented: true
     working: true
     file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Should show recommended calories on save"
+      - working: true
+        agent: "testing"
+        comment: "Profile form fully functional. Successfully filled with realistic values (height 170cm, weight 68kg, age 28, female, moderate activity, lose goal, moderate intensity, goal weight 63kg). Calculates and displays recommended daily calories (1734 kcal/day). Save functionality works with success message display."
   - task: "Camera capture + upload + AI estimate"
     implemented: true
-    working: true
+    working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Video element always rendered; base64 sent to backend; simulate toggle included"
+      - working: false
+        agent: "testing"
+        comment: "Minor issue with test mode toggle: API key input field remains visible when test mode is ON, should be hidden. Core functionality works - image upload successful, preview renders correctly, AI estimation returns results (420 kcal with items list) in test mode. Camera access blocked as expected in testing environment."
 
 metadata:
   created_by: "main_agent"
