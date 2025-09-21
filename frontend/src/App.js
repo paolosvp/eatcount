@@ -222,6 +222,23 @@ function DayLogPanel({ auth, refreshKey, optimisticAdd }) {
 
   useEffect(()=>{ fetchMeals(); }, [auth.token, date, refreshKey]);
 
+  // Optimistic update for progress bar and total when a save just happened for the current date
+  useEffect(() => {
+    if (!optimisticAdd) return;
+    const isSameDay = (new Date().toISOString().slice(0,10) === date);
+    if (!isSameDay) return;
+    setTotal(t => Math.round((t + (Number(optimisticAdd.total_calories||0))) * 100) / 100);
+    setMeals(m => [{
+      id: optimisticAdd.id || `temp-${Date.now()}`,
+      total_calories: optimisticAdd.total_calories,
+      items: optimisticAdd.items || [],
+      notes: optimisticAdd.notes || '',
+      image_base64: optimisticAdd.image_base64 || '',
+      created_at: optimisticAdd.created_at || new Date().toISOString()
+    }, ...m]);
+    // Do not persist; next server fetch will canonize data
+  }, [optimisticAdd]);
+
   const remove = async (id) => {
     if (!auth.token) return;
     try {
