@@ -374,10 +374,9 @@ function ScannerPanel({ auth, onSaved }) {
         notes: (desc || result.notes || '').toString(),
         image_base64: snapshot,
       };
-      await axios.post(`${API}/meals`, payload, { headers });
-      onSaved && onSaved();
+      const { data } = await axios.post(`${API}/meals`, payload, { headers });
+      onSaved && onSaved(data);
       setError('');
-      alert('Saved to Day Log');
     } catch (e) {
       setError(e?.response?.data?.detail || e.message);
     }
