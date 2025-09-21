@@ -196,39 +196,24 @@ function ProfilePanel({ auth }) {
 }
 
 function DayLogPanel({ auth, refreshKey }) {
-  const localDateStr = (d = new Date()) => {
-    const tz = d.getTimezoneOffset();
-    const local = new Date(d.getTime() - tz * 60000);
-    return local.toISOString().slice(0, 10);
-  };
-  const [date, setDate] = useState(() => localDateStr());
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0,10));
   const [meals, setMeals] = useState([]);
   const [total, setTotal] = useState(0);
   const [target, setTarget] = useState(null);
   const [streak, setStreak] = useState({ current_streak_days: 0, best_streak_days: 0 });
-  const [pending, setPending] = useState([]); // optimistic meals not yet seen from server
   const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
 
   const fetchMeals = async () => {
-    if (!auth.token) { setMeals([]); setTotal(0); setTarget(null); setPending([]); return; }
+    if (!auth.token) { setMeals([]); setTotal(0); setTarget(null); return; }
     try {
       const tz = new Date().getTimezoneOffset();
-      const queryDate = date; // local date string
-      const [mealsRes, profileRes, streakRes] = await Promise.all([
-        axios.get(`${API}/meals`, { params: { date: queryDate, tz_offset_minutes: tz }, headers }),
-        axios.get(`${API}/profile/me`, { headers }),
-        axios.get(`${API}/meals/stats`, { headers })
-      ]);
-      const serverMeals = mealsRes.data.meals || [];
-      setMeals(serverMeals);
-      setTotal(mealsRes.data.daily_total || 0);
-      setTarget(profileRes.data.profile?.recommended_daily_calories || null);
-      setStreak(streakRes.data || { current_streak_days: 0, best_streak_days: 0 });
-      // Drop pending items that are now present in server list
-      setPending((p) => {
-        const ids = new Set(serverMeals.map(x => x.id));
-        return p.filter(x => !x.id || !ids.has(x.id));
-      });
+      const resMeals = await axios.get(`${API}/meals`, { params: { date, tz_offset_minutes: tz }, headers });
+      const resProfile = await axios.get(`${API}/profile/me`, { headers });
+      const resStats = await axios.get(`${API}/meals/stats`, { headers });
+      setMeals(resMeals.data.meals || []);
+      setTotal(resMeals.data.daily_total || 0);
+      setTarget(resProfile.data.profile?.recommended_daily_calories || null);
+      setStreak(resStats.data || { current_streak_days: 0, best_streak_days: 0 });
     } catch (e) {
       setMeals([]); setTotal(0); setTarget(null);
     }
@@ -236,66 +221,26 @@ function DayLogPanel({ auth, refreshKey }) {
 
   useEffect(()=>{ fetchMeals(); }, [auth.token, date, refreshKey]);
 
-  // Optimistic add: only if the saved meal is for the currently viewed date (assume today)
-  useEffect(() => {
-    if (!optimisticAdd) return;
-    const isSameDay = (localDateStr() === date);
-    if (!isSameDay) return;
-    setPending((p)=>{
-      const exists = p.some(x => x.id === optimisticAdd.id);
-      if (exists) return p;
-      const entry = {
-        id: optimisticAdd.id || `temp-${Date.now()}`,
-        total_calories: Number(optimisticAdd.total_calories||0),
-        items: Array.isArray(optimisticAdd.items)? optimisticAdd.items: [],
-        notes: optimisticAdd.notes || '',
-        image_base64: optimisticAdd.image_base64 || '',
-        created_at: optimisticAdd.created_at || new Date().toISOString()
-      };
-      return [entry, ...p];
-    });
-  }, [optimisticAdd, date]);
-
   const remove = async (id) => {
     if (!auth.token) return;
     try {
       await axios.delete(`${API}/meals/${id}`, { headers });
-      // Also remove from pending in case it's still there
-      setPending(p => p.filter(x => x.id !== id));
-      // Remove from view immediately
-      setMeals(m => m.filter(x => x.id !== id));
-      // Re-fetch to sync totals from server
       await fetchMeals();
     } catch (e) { /* ignore */ }
   };
 
-  // Compose pending + server meals for display; adjust total accordingly to avoid flicker
-  const pendingTotal = pending.reduce((acc, m) => acc + Number(m.total_calories||0), 0);
-  const displayMeals = [...pending, ...meals];
-  const displayTotal = Math.round((Number(total||0) + pendingTotal) * 100) / 100;
-  const pct = target ? Math.min(100, Math.round((displayTotal/target)*100)) : null;
-
-  const browserTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const formatLocal = (iso) => {
-    try {
-      return new Date(iso).toLocaleString([], { timeZone: browserTZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-    } catch { return iso; }
-  };
+  const pct = target ? Math.min(100, Math.round((total/target)*100)) : null;
 
   return (
     <div className="card">
       <h3 style={{marginTop:0}}>Day Log</h3>
       <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
         <input className="input" type="date" value={date} onChange={e=>setDate(e.target.value)} />
-        <div className="small">Total: <b>{Math.round(displayTotal)}</b> kcal {target ? `(of ${target})` : ''}</div>
+        <div className="small">Total: <b>{Math.round(total)}</b> kcal {target ? `(of ${target})` : ''}</div>
         <button className="btn-secondary" onClick={async ()=>{
-          // Download CSV of current date
-          const rows = [
-            ['created_at','name','quantity_units','calories','notes'],
-          ];
-          const list = displayMeals;
-          list.forEach(m => {
-            const when = formatLocal(m.created_at);
+          const rows = [ ['created_at','name','quantity_units','calories','notes'] ];
+          (meals||[]).forEach(m => {
+            const when = new Date(m.created_at).toLocaleString();
             if (Array.isArray(m.items) && m.items.length>0) {
               m.items.forEach(it => {
                 rows.push([when, String(it.name||''), String(it.quantity_units||''), String(it.calories||0), String(m.notes||'')]);
@@ -315,19 +260,10 @@ function DayLogPanel({ auth, refreshKey }) {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
         }}>Download CSV</button>
-        {target !== null && (
-          <div style={{flexBasis:'100%', marginTop:6}}>
-            <div style={{height:10, borderRadius:6, background:'rgba(24,24,24,0.08)', overflow:'hidden'}}>
-              <div style={{width: `${pct}%`, height:'100%', background:'rgb(0,128,255)'}} />
-            </div>
-            <div className="small" style={{marginTop:4}}>{pct}% of daily target</div>
-          </div>
-        )}
-        <div className="small">Streak: <b>{streak.current_streak_days}</b> days (best {streak.best_streak_days})</div>
       </div>
       <div className="items-list" style={{marginTop:8}}>
-        {displayMeals.length === 0 && <div className="small">No entries for this day.</div>}
-        {displayMeals.map((m) => (
+        {meals.length === 0 && <div className="small">No entries for this day.</div>}
+        {meals.map((m) => (
           <div key={m.id} className="item-row" style={{alignItems:'flex-start', gap:8}}>
             <div style={{display:'flex', gap:10, alignItems:'flex-start'}}>
               {m.image_base64 && (
@@ -353,6 +289,14 @@ function DayLogPanel({ auth, refreshKey }) {
           </div>
         ))}
       </div>
+      {target !== null && (
+        <div style={{flexBasis:'100%', marginTop:6}}>
+          <div style={{height:10, borderRadius:6, background:'rgba(24,24,24,0.08)', overflow:'hidden'}}>
+            <div style={{width: `${pct}%`, height:'100%', background:'rgb(0,128,255)'}} />
+          </div>
+          <div className="small" style={{marginTop:4}}>{pct}% of daily target</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -371,10 +315,6 @@ function ScannerPanel({ auth, onSaved }) {
     return saved ? saved === 'true' : true; // default ON
   });
   const [apiKey, setApiKey] = useState('');
-
-  useEffect(()=>{
-    // nothing initially
-  }, []);
 
   const startCamera = async () => {
     try {
@@ -418,7 +358,6 @@ function ScannerPanel({ auth, onSaved }) {
       const payload = { message: desc, images: [{ data: snapshot, mime_type: 'image/jpeg', filename: 'capture.jpg' }], simulate, api_key: apiKey !== '' ? apiKey : undefined };
       const res = await axios.post(`${API}/ai/estimate-calories`, payload);
       setResult(res.data);
-      // Key mode banner based on engine_info
       if (res.data?.engine_info?.key_mode === 'provided') {
         console.log('Using provided API key');
       } else if (res.data?.engine_info?.key_mode === 'emergent') {
@@ -436,7 +375,6 @@ function ScannerPanel({ auth, onSaved }) {
     if (!result) { setError('No estimate to save'); return; }
     try {
       const headers = { Authorization: `Bearer ${auth.token}` };
-      // Normalize items to backend schema defensively
       const normalizeItem = (it) => ({
         name: String(it?.name || '').trim() || 'Item',
         quantity_units: String(it?.quantity_units || it?.quantity || it?.portion || '').trim(),
@@ -453,7 +391,7 @@ function ScannerPanel({ auth, onSaved }) {
         const hh = pad(d.getHours());
         const mm = pad(d.getMinutes());
         const ss = pad(d.getSeconds());
-        const tz = -d.getTimezoneOffset(); // minutes east of UTC
+        const tz = -d.getTimezoneOffset();
         const sign = tz >= 0 ? '+' : '-';
         const abs = Math.abs(tz);
         const th = pad(Math.floor(abs/60));
@@ -467,8 +405,8 @@ function ScannerPanel({ auth, onSaved }) {
         image_base64: snapshot,
         captured_at: toLocalISOWithOffset(),
       };
-      const { data } = await axios.post(`${API}/meals`, payload, { headers });
-      onSaved && onSaved(data);
+      await axios.post(`${API}/meals`, payload, { headers });
+      onSaved && onSaved();
       setError('');
     } catch (e) {
       setError(e?.response?.data?.detail || e.message);
@@ -555,8 +493,6 @@ function ScannerPanel({ auth, onSaved }) {
 export default function App(){
   const auth = useAuth();
   const [logRefreshKey, setLogRefreshKey] = useState(0);
-  const [optimisticSave, setOptimisticSave] = useState(null); // last saved meal
-
 
   useEffect(()=>{
     (async ()=>{
@@ -578,10 +514,10 @@ export default function App(){
           <div><ProfilePanel auth={auth} /></div>
         </div>
         <div style={{marginTop:16}}>
-          <ScannerPanel auth={auth} onSaved={(saved) => { setOptimisticSave(saved); setLogRefreshKey(k=>k+1); }} />
+          <ScannerPanel auth={auth} onSaved={() => setLogRefreshKey(k=>k+1)} />
         </div>
         <div style={{marginTop:16}}>
-          <DayLogPanel auth={auth} refreshKey={logRefreshKey} optimisticAdd={optimisticSave} />
+          <DayLogPanel auth={auth} refreshKey={logRefreshKey} />
         </div>
         <div className="footer-space" />
       </Section>
