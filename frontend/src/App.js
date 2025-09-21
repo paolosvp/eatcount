@@ -411,11 +411,27 @@ function ScannerPanel({ auth, onSaved }) {
       });
       const normItems = Array.isArray(result.items) ? result.items.map(normalizeItem) : [];
       const total = Number(result.total_calories || 0);
+      const toLocalISOWithOffset = (d = new Date()) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        const y = d.getFullYear();
+        const m = pad(d.getMonth()+1);
+        const day = pad(d.getDate());
+        const hh = pad(d.getHours());
+        const mm = pad(d.getMinutes());
+        const ss = pad(d.getSeconds());
+        const tz = -d.getTimezoneOffset(); // minutes east of UTC
+        const sign = tz >= 0 ? '+' : '-';
+        const abs = Math.abs(tz);
+        const th = pad(Math.floor(abs/60));
+        const tm = pad(abs%60);
+        return `${y}-${m}-${day}T${hh}:${mm}:${ss}${sign}${th}:${tm}`;
+      };
       const payload = {
         total_calories: total,
         items: normItems,
         notes: (desc || result.notes || '').toString(),
         image_base64: snapshot,
+        captured_at: toLocalISOWithOffset(),
       };
       const { data } = await axios.post(`${API}/meals`, payload, { headers });
       onSaved && onSaved(data);
