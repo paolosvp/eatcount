@@ -278,8 +278,11 @@ def _force_extract_json(text: str) -> Dict[str, Any]:
 
 @api.post('/ai/estimate-calories')
 async def estimate_calories(payload: AIRequest):
-    # Use Emergent LLM Key by default if available; still allow simulate toggle
-    if payload.simulate or not (payload.api_key or EMERGENT_LLM_KEY):
+    # Key Management Policy:
+    # - If simulate True: return simulated and indicate mode
+    # - If api_key provided and non-empty: use it exclusively (no fallback). On auth error, notify user.
+    # - If api_key missing or empty: use Emergent LLM Key if available; otherwise notify user.
+    if payload.simulate:
         sample = {
             "total_calories": 420,
             "items": [
@@ -288,25 +291,25 @@ async def estimate_calories(payload: AIRequest):
                 {"name": "Olive oil", "quantity_units": "1 tbsp", "calories": 90, "confidence": 0.65}
             ],
             "confidence": 0.74,
-            "notes": "Simulated estimate (no API key provided)"
+            "notes": "Simulated estimate",
+            "engine_info": {"key_mode": "simulate", "model": "gpt-4o"}
         }
         return JSONResponse(content=sample)
 
-    provided_key = (payload.api_key or "").strip() if payload.api_key is not None else ""
-    effective_key = provided_key or (EMERGENT_LLM_KEY or "").strip()
-    if not effective_key:
-        # No usable key after trimming, fall back to simulated response
-        sample = {
-            "total_calories": 420,
-            "items": [
-                {"name": "Grilled chicken", "quantity_units": "150g", "calories": 250, "confidence": 0.78},
-                {"name": "Mixed salad", "quantity_units": "1 bowl", "calories": 80, "confidence": 0.7},
-                {"name": "Olive oil", "quantity_units": "1 tbsp", "calories": 90, "confidence": 0.65}
-            ],
-            "confidence": 0.74,
-            "notes": "Simulated estimate (no API key available)"
-        }
-        return JSONResponse(content=sample)
+    provided_key_raw = payload.api_key if payload.api_key is not None else None
+    provided_key = (provided_key_raw or "").strip() if provided_key_raw is not None else None
+
+    if provided_key is not None and provided_key != "":
+        # Use provided key only; do not fallback
+        effective_key = provided_key
+        key_mode = "provided"
+    else:
+        # No or empty key from client → try Emergent LLM Key
+        emergent = (EMERGENT_LLM_KEY or "").strip()
+        if not emergent:
+            raise HTTPException(status_code=400, detail="No API key available. Provide api_key or configure Emergent LLM Key.")
+        effective_key = emergent
+        key_mode = "emergent"
 
     try:
         chat = LlmChat(api_key=effective_key, session_id=str(uuid.uuid4()), system_message=SYSTEM_PROMPT).with_model("openai", "gpt-4o")
@@ -321,9 +324,14 @@ async def estimate_calories(payload: AIRequest):
             parsed = _force_extract_json(raw_text)
         if not isinstance(parsed, dict) or 'total_calories' not in parsed:
             parsed = _force_extract_json(raw_text)
+        # Attach engine info for user awareness
+        parsed["engine_info"] = {"key_mode": key_mode, "model": "gpt-4o"}
         return JSONResponse(content=parsed)
     except Exception as e:
         logger.exception("LLM estimation failed")
+        msg = str(e).lower()
+        if key_mode == "provided" and ("401" in msg or "unauthorized" in msg or "invalid" in msg or "auth" in msg):
+            raise HTTPException(status_code=401, detail="Provided API key is invalid or unauthorized.")
         raise HTTPException(status_code=500, detail=f"AI Estimation failed: {e}")
 
 
