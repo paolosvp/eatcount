@@ -343,17 +343,26 @@ class MealsForDateResponse(BaseModel):
     daily_total: float
 
 
-def _today_range_utc(date_str: Optional[str] = None):
+def _day_range_local_to_utc(date_str: Optional[str], tz_offset_minutes: int):
+    """
+    Convert a local calendar day (date_str) + client's timezone offset (in minutes)
+    into UTC [start,end) bounds. JS getTimezoneOffset returns minutes between local and UTC.
+    UTC = local + offset_minutes.
+    """
     if date_str:
         try:
             y, m, d = [int(x) for x in date_str.split('-')]
-            start = datetime(y, m, d, 0, 0, 0, tzinfo=timezone.utc)
+            local_start = datetime(y, m, d, 0, 0, 0)  # naive local
         except Exception:
-            start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            now_local = datetime.utcnow()  # fallback
+            local_start = datetime(now_local.year, now_local.month, now_local.day, 0, 0, 0)
     else:
-        start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    end = start + timedelta(days=1)
-    return start, end
+        now_local = datetime.utcnow()
+        local_start = datetime(now_local.year, now_local.month, now_local.day, 0, 0, 0)
+
+    start_utc = (local_start + timedelta(minutes=tz_offset_minutes)).replace(tzinfo=timezone.utc)
+    end_utc = start_utc + timedelta(days=1)
+    return start_utc, end_utc
 
 
 @api.post('/meals', response_model=MealOut)
@@ -384,8 +393,8 @@ async def add_meal(meal: MealCreate, user=Depends(get_current_user)):
 
 
 @api.get('/meals', response_model=MealsForDateResponse)
-async def list_meals(date: Optional[str] = Query(default=None, description="YYYY-MM-DD"), user=Depends(get_current_user)):
-    start, end = _today_range_utc(date)
+async def list_meals(date: Optional[str] = Query(default=None, description="YYYY-MM-DD"), tz_offset_minutes: int = Query(default=0, description="Timezone offset in minutes"), user=Depends(get_current_user)):
+    start, end = _day_range_local_to_utc(date, tz_offset_minutes)
     cursor = db.meals.find({
         "user_id": user['_id'],
         "created_at": {"$gte": start, "$lt": end}
