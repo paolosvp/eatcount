@@ -90,6 +90,7 @@ function ProfilePanel({ auth }) {
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({ height_cm:'', weight_kg:'', age:'', gender:'male', activity_level:'light', goal:'maintain', goal_intensity:'moderate', goal_weight_kg:'' });
   const [msg, setMsg] = useState('');
+  const [loaded, setLoaded] = useState(false);
 
   const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
 
