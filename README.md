@@ -116,6 +116,7 @@ MealOut
 - All backend routes must be under /api
 - IDs are UUID strings
 - Images saved as base64
+- **Dual Estimation UI**: "📷 Estimate by Image" (conditional), "✏️ Estimate by Text" (always visible)
 - Time: UI prefers display_local; queries convert local day + offset → UTC window
 
 
