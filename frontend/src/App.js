@@ -120,7 +120,7 @@ function ProfilePanel({ auth }) {
   const fetchMe = async () => {
     if (!auth.token) return;
     try {
-      const res = await axios.get(`${API}/profile/me`, { headers });
+      const res = await apiClient.get(`${API}/profile/me`);
       const p = res.data.profile;
       setProfile(p);
       if (p && !loaded) {
