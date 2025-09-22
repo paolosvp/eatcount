@@ -1,6 +1,6 @@
 # Calorie Tracker (Camera + AI)
 
-A full‑stack calories counter with: camera upload, AI food recognition (gpt‑4o), Day Log with totals, daily target via profile, CSV export, and timezone‑correct logging. Built with React + FastAPI + MongoDB.
+A full‑stack calories counter with: camera upload, **dual AI estimation modes** (image + text), Day Log with totals, daily target via profile, CSV export, and timezone‑correct logging. Built with React + FastAPI + MongoDB.
 
 Live Frontend: configured via frontend/.env (REACT_APP_BACKEND_URL). All backend endpoints are under /api.
 
