@@ -71,7 +71,7 @@ function AuthPanel({ auth }) {
     e.preventDefault(); setMsg('');
     try {
       const url = mode === 'login' ? `${API}/auth/login` : `${API}/auth/register`;
-      const res = await axios.post(url, form);
+      const res = await apiClient.post(url, form);
       auth.save(res.data.access_token, form.email);
       setMsg('Success');
     } catch (err) {
