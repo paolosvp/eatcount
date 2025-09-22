@@ -212,11 +212,11 @@ frontend:
         comment: "Profile form fully functional. Successfully filled with realistic values (height 170cm, weight 68kg, age 28, female, moderate activity, lose goal, moderate intensity, goal weight 63kg). Calculates and displays recommended daily calories (1734 kcal/day). Save functionality works with success message display."
   - task: "Camera capture + upload + AI estimate"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/App.js"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
