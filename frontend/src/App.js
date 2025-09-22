@@ -152,7 +152,7 @@ function ProfilePanel({ auth }) {
         age: parseInt(form.age, 10),
         goal_weight_kg: form.goal_weight_kg? parseFloat(form.goal_weight_kg): null
       };
-      const res = await axios.put(`${API}/profile`, payload, { headers });
+      const res = await apiClient.put(`${API}/profile`, payload);
       setProfile(res.data.profile);
       setMsg('Saved');
       // hydrate form with saved values to reflect persisted state
