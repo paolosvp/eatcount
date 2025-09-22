@@ -69,7 +69,10 @@ Prerequisites
 5) Login + Save Flow (UI)
 - Register/Login in Account
 - Fill Profile & Save to compute daily target
-- Scan: Start Camera or Upload Image; optionally describe; Estimate
+- Scan: Start Camera or Upload Image
+- **Estimation Options:**
+  - **With Image**: Use "📷 Estimate by Image" button (description optional)
+  - **Text Only**: Use "✏️ Estimate by Text" button (description required)
 - Save to Day Log → refresh Day Log → check daily total and entries
 
 
