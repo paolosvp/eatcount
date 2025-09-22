@@ -24,6 +24,28 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Centralized axios client with JWT injection and 401 handling
+const apiClient = axios.create();
+apiClient.interceptors.request.use((config) => {
+  try {
+    const t = localStorage.getItem('token');
+    if (t) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${t}`;
+    }
+  } catch {}
+  return config;
+});
+apiClient.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error?.response?.status === 401) {
+      window.dispatchEvent(new CustomEvent('auth-expired'));
+    }
+    return Promise.reject(error);
+  }
+);
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL; // do not hardcode
 const API = `${BACKEND_URL}/api`;
 
