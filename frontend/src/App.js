@@ -98,7 +98,21 @@ function ProfilePanel({ auth }) {
     if (!auth.token) return;
     try {
       const res = await axios.get(`${API}/profile/me`, { headers });
-      setProfile(res.data.profile);
+      const p = res.data.profile;
+      setProfile(p);
+      if (p && !loaded) {
+        setForm({
+          height_cm: p.height_cm ?? '',
+          weight_kg: p.weight_kg ?? '',
+          age: p.age ?? '',
+          gender: p.gender ?? 'male',
+          activity_level: p.activity_level ?? 'light',
+          goal: p.goal ?? 'maintain',
+          goal_intensity: p.goal_intensity ?? 'moderate',
+          goal_weight_kg: p.goal_weight_kg ?? ''
+        });
+        setLoaded(true);
+      }
     } catch (e) { /* ignore */ }
   };
 
