@@ -397,6 +397,7 @@ class MealOut(BaseModel):
     notes: Optional[str]
     image_base64: Optional[str]
     created_at: str
+    display_local: Optional[str] = None
 
 
 class MealsForDateResponse(BaseModel):
