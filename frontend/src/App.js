@@ -563,12 +563,19 @@ function ScannerPanel({ auth, onSaved }) {
           </div>
         )}
         <div className="row" style={{marginTop:8}}>
-          <label className="label">Add a description (optional)</label>
-          <textarea className="input" rows={3} placeholder="e.g. No dressing, medium portion"
+          <label className="label">Add a description {snapshot ? '(optional)' : '(required for text estimation)'}</label>
+          <textarea className="input" rows={3} placeholder={snapshot ? "e.g. No dressing, medium portion" : "e.g. Large pepperoni pizza, 2 slices"}
             value={desc} onChange={e=>setDesc(e.target.value)} />
         </div>
         <div style={{display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
-          <button className="btn-primary" disabled={!snapshot || loading} onClick={estimate}>{loading? 'Estimating...':'Estimate Calories'}</button>
+          {snapshot && (
+            <button className="btn-primary" disabled={loading} onClick={estimateByImage}>
+              {loading ? 'Estimating...' : '📷 Estimate by Image'}
+            </button>
+          )}
+          <button className="btn-accent" disabled={loading} onClick={estimateByText}>
+            {loading ? 'Estimating...' : '✏️ Estimate by Text'}
+          </button>
           <label className="small" style={{display:'inline-flex', alignItems:'center', gap:6}}>
             <input type="checkbox" checked={simulate} onChange={e=>{setSimulate(e.target.checked); localStorage.setItem('simulate_mode', String(e.target.checked));}} /> Test mode (no API key)
           </label>
