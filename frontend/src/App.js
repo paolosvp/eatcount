@@ -474,7 +474,7 @@ function ScannerPanel({ auth, onSaved }) {
         image_base64: snapshot,
         captured_at: toLocalISOWithOffset(),
       };
-      await axios.post(`${API}/meals`, payload, { headers });
+      await apiClient.post(`${API}/meals`, payload);
       onSaved && onSaved();
       setError('');
     } catch (e) {
