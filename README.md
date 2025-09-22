@@ -28,7 +28,10 @@ Profile (Daily Target)
 - Email/password auth (JWT). Centralized Axios client auto‑injects Authorization. 401 → session‑expired event.
 - Profile & Daily Target: Mifflin–St Jeor + activity + goal adjustments.
 - Camera capture + image upload. Always render video/canvas to avoid ref timing errors.
-- AI calories estimate (gpt‑4o via emergentintegrations). Strict JSON response with retry + conservative fallback.
+- **Dual AI Estimation Modes**: 
+  - **📷 Estimate by Image**: Uses captured/uploaded image with optional description (only appears when image exists)
+  - **✏️ Estimate by Text**: Text-only estimation requiring food description (always available)
+  - Both powered by GPT-4o via emergentintegrations with strict JSON response parsing
 - Key policy: Test mode (simulated), Live with provided key (no fallback), Live with empty key → Emergent LLM Key.
 - Day Log: save meals (items, notes, base64 image), list by local day with daily total + progress bar, delete entries, CSV export.
 - Timezone: UI saves captured_at with local offset; backend stores created_at (tz‑aware) and display_local; queries use tz_offset_minutes; UI shows human‑friendly local times; CSV uses local ISO with offset.
