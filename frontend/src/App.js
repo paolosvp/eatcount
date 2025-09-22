@@ -326,7 +326,7 @@ function DayLogPanel({ auth, refreshKey }) {
         <button className="btn-secondary" onClick={async ()=>{
           const rows = [ ['created_at','name','quantity_units','calories','notes'] ];
           (meals||[]).forEach(m => {
-            const when = new Date(m.created_at).toLocaleString();
+            const when = m.display_local ? toLocalISOWithOffset(m.display_local) : toLocalISOWithOffset(m.created_at);
             if (Array.isArray(m.items) && m.items.length>0) {
               m.items.forEach(it => {
                 rows.push([when, String(it.name||''), String(it.quantity_units||''), String(it.calories||0), String(m.notes||'')]);
