@@ -231,11 +231,19 @@ function DayLogPanel({ auth, refreshKey }) {
   const [streak, setStreak] = useState({ current_streak_days: 0, best_streak_days: 0 });
   const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
 
-  const browserTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const formatLocal = (iso) => {
+  // Human-friendly date formatter: e.g., 21 Sep 2025, 14:05 (always local browser time)
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const formatHuman = (isoOrLocal) => {
     try {
-      return new Date(iso).toLocaleString([], { timeZone: browserTZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-    } catch { return iso; }
+      const d = new Date(isoOrLocal);
+      const day = pad2(d.getDate());
+      const mon = MONTHS[d.getMonth()];
+      const yr = d.getFullYear();
+      const hh = pad2(d.getHours());
+      const mm = pad2(d.getMinutes());
+      return `${day} ${mon} ${yr}, ${hh}:${mm}`;
+    } catch { return isoOrLocal; }
   };
 
   const fetchMeals = async () => {
