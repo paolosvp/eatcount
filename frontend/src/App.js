@@ -291,7 +291,7 @@ function DayLogPanel({ auth, refreshKey }) {
   const remove = async (id) => {
     if (!auth.token) return;
     try {
-      await axios.delete(`${API}/meals/${id}`, { headers });
+      await apiClient.delete(`${API}/meals/${id}`);
       await fetchMeals();
     } catch (e) { /* ignore */ }
   };
