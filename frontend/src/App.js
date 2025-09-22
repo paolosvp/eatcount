@@ -273,9 +273,9 @@ function DayLogPanel({ auth, refreshKey }) {
     if (!auth.token) { setMeals([]); setTotal(0); setTarget(null); return; }
     try {
       const tz = new Date().getTimezoneOffset();
-      const resMeals = await axios.get(`${API}/meals`, { params: { date, tz_offset_minutes: tz }, headers });
-      const resProfile = await axios.get(`${API}/profile/me`, { headers });
-      const resStats = await axios.get(`${API}/meals/stats`, { headers });
+      const resMeals = await apiClient.get(`${API}/meals`, { params: { date, tz_offset_minutes: tz } });
+      const resProfile = await apiClient.get(`${API}/profile/me`);
+      const resStats = await apiClient.get(`${API}/meals/stats`);
       setMeals(resMeals.data.meals || []);
       setTotal(resMeals.data.daily_total || 0);
       setTarget(resProfile.data.profile?.recommended_daily_calories || null);
