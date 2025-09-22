@@ -438,7 +438,7 @@ function ScannerPanel({ auth, onSaved }) {
     setSnapshot(base64);
   };
 
-  const estimate = async () => {
+  const estimateByImage = async () => {
     setLoading(true); setError(''); setResult(null);
     try {
       const payload = { message: desc, images: [{ data: snapshot, mime_type: 'image/jpeg', filename: 'capture.jpg' }], simulate, api_key: apiKey !== '' ? apiKey : undefined };
@@ -449,6 +449,30 @@ function ScannerPanel({ auth, onSaved }) {
       const empty = (!Array.isArray(data.items) || data.items.length === 0) && Number(data.total_calories || 0) === 0;
       if (isLive && empty) {
         setError('AI did not return a usable result. Please try again or add a brief description.');
+        setResult(null);
+        return;
+      }
+      setResult(data);
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message);
+    } finally { setLoading(false); }
+  };
+
+  const estimateByText = async () => {
+    if (!desc.trim()) {
+      setError('Please enter a description for text-based estimation');
+      return;
+    }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const payload = { message: desc, images: [], simulate, api_key: apiKey !== '' ? apiKey : undefined };
+      const res = await apiClient.post(`${API}/ai/estimate-calories`, payload);
+      const data = res.data || {};
+      // Explicitly surface errors in Live mode when model returns unusable content
+      const isLive = !simulate;
+      const empty = (!Array.isArray(data.items) || data.items.length === 0) && Number(data.total_calories || 0) === 0;
+      if (isLive && empty) {
+        setError('AI did not return a usable result. Please try a more detailed description.');
         setResult(null);
         return;
       }
