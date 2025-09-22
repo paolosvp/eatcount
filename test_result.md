@@ -212,11 +212,11 @@ frontend:
         comment: "Profile form fully functional. Successfully filled with realistic values (height 170cm, weight 68kg, age 28, female, moderate activity, lose goal, moderate intensity, goal weight 63kg). Calculates and displays recommended daily calories (1734 kcal/day). Save functionality works with success message display."
   - task: "Camera capture + upload + AI estimate"
     implemented: true
-    working: false
+    working: "NA"
     file: "/app/frontend/src/App.js"
     stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: true
         agent: "main"
@@ -224,6 +224,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "Minor issue with test mode toggle: API key input field remains visible when test mode is ON, should be hidden. Core functionality works - image upload successful, preview renders correctly, AI estimation returns results (420 kcal with items list) in test mode. Camera access blocked as expected in testing environment."
+      - working: "NA"
+        agent: "main"
+        comment: "Split estimate functionality implemented with two separate buttons: '📷 Estimate by Image' (conditional visibility) and '✏️ Estimate by Text' (always visible). Need comprehensive testing of new split functionality including conditional visibility, validation, styling, and both estimation paths."
 
 metadata:
   created_by: "main_agent"
