@@ -484,7 +484,8 @@ async def list_meals(date: Optional[str] = Query(default=None, description="YYYY
             items=[MealItem(**i) for i in m.get('items', [])],
             notes=m.get('notes'),
             image_base64=m.get('image_base64'),
-            created_at=m.get('created_at').isoformat() if m.get('created_at') else datetime.now(timezone.utc).isoformat()
+            created_at=m.get('created_at').isoformat() if m.get('created_at') else datetime.now(timezone.utc).isoformat(),
+            display_local=m.get('display_local')
         ))
     date_out = (start.date()).isoformat()
     return MealsForDateResponse(date=date_out, meals=meals, daily_total=round(total, 2))
