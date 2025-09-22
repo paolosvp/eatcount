@@ -236,7 +236,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Minor UI fix for test mode toggle visibility"
+    - "Split estimate functionality testing - two separate buttons with conditional visibility and validation"
   stuck_tasks:
     - "None"
   test_all: false
