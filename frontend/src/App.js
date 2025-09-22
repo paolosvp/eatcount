@@ -132,6 +132,18 @@ function ProfilePanel({ auth }) {
       const res = await axios.put(`${API}/profile`, payload, { headers });
       setProfile(res.data.profile);
       setMsg('Saved');
+      // hydrate form with saved values to reflect persisted state
+      const p = res.data.profile;
+      setForm({
+        height_cm: p.height_cm ?? '',
+        weight_kg: p.weight_kg ?? '',
+        age: p.age ?? '',
+        gender: p.gender ?? 'male',
+        activity_level: p.activity_level ?? 'light',
+        goal: p.goal ?? 'maintain',
+        goal_intensity: p.goal_intensity ?? 'moderate',
+        goal_weight_kg: p.goal_weight_kg ?? ''
+      });
     } catch (err) {
       setMsg(err?.response?.data?.detail || err.message);
     }
