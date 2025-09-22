@@ -250,6 +250,237 @@ class BackendTester:
         except Exception as e:
             self.log_result("AI Estimate (Simulate)", False, f"Request failed: {str(e)}")
     
+    def test_end_to_end_auth_save_flow(self):
+        """
+        End-to-end validation of auth + save flow using curl-like requests:
+        1) Register and login to get token
+        2) Create a meal with captured_at including timezone offset
+        3) Fetch meals for that local date with tz_offset_minutes; confirm the created meal is returned and daily_total reflects it
+        4) Delete the meal and confirm removal
+        """
+        print("=" * 60)
+        print("END-TO-END AUTH + SAVE FLOW VALIDATION")
+        print("=" * 60)
+        
+        # Step 1: Register and login to get token
+        print("Step 1: Register and login to get token")
+        print("-" * 40)
+        
+        test_email = "endtoend.test@example.com"
+        test_password = "EndToEndTest123!"
+        
+        # Register
+        register_payload = {
+            "email": test_email,
+            "password": test_password
+        }
+        
+        try:
+            register_response = self.session.post(f"{API_BASE}/auth/register", json=register_payload, timeout=10)
+            print(f"Register Request: POST {API_BASE}/auth/register")
+            print(f"Register Payload: {json.dumps(register_payload, indent=2)}")
+            print(f"Register Response Code: {register_response.status_code}")
+            
+            if register_response.status_code == 200:
+                register_data = register_response.json()
+                print(f"Register Response: {json.dumps(register_data, indent=2)}")
+                token = register_data.get('access_token')
+                print(f"✅ Registration successful, token obtained")
+            elif register_response.status_code == 400:
+                # User might already exist, try login
+                print("User already exists, attempting login...")
+                login_payload = {
+                    "email": test_email,
+                    "password": test_password
+                }
+                
+                login_response = self.session.post(f"{API_BASE}/auth/login", json=login_payload, timeout=10)
+                print(f"Login Request: POST {API_BASE}/auth/login")
+                print(f"Login Payload: {json.dumps(login_payload, indent=2)}")
+                print(f"Login Response Code: {login_response.status_code}")
+                
+                if login_response.status_code == 200:
+                    login_data = login_response.json()
+                    print(f"Login Response: {json.dumps(login_data, indent=2)}")
+                    token = login_data.get('access_token')
+                    print(f"✅ Login successful, token obtained")
+                else:
+                    print(f"❌ Login failed: {login_response.text}")
+                    return
+            else:
+                print(f"❌ Registration failed: {register_response.text}")
+                return
+                
+        except Exception as e:
+            print(f"❌ Auth step failed: {str(e)}")
+            return
+        
+        print()
+        
+        # Step 2: Create a meal with captured_at including timezone offset
+        print("Step 2: Create a meal with captured_at including timezone offset")
+        print("-" * 40)
+        
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Create meal with timezone-aware captured_at (Berlin time: UTC+1 in winter, UTC+2 in summer)
+        # Using +02:00 offset (summer time)
+        meal_payload = {
+            "total_calories": 450.0,
+            "items": [
+                {
+                    "name": "Grilled salmon",
+                    "quantity_units": "150g",
+                    "calories": 280.0,
+                    "confidence": 0.85
+                },
+                {
+                    "name": "Quinoa salad",
+                    "quantity_units": "1 cup",
+                    "calories": 170.0,
+                    "confidence": 0.80
+                }
+            ],
+            "notes": "Healthy lunch with timezone test",
+            "captured_at": "2025-01-15T12:00:00+02:00"  # Berlin time with +2 offset
+        }
+        
+        try:
+            meal_response = self.session.post(f"{API_BASE}/meals", json=meal_payload, headers=headers, timeout=10)
+            print(f"Create Meal Request: POST {API_BASE}/meals")
+            print(f"Create Meal Headers: {json.dumps(dict(headers), indent=2)}")
+            print(f"Create Meal Payload: {json.dumps(meal_payload, indent=2)}")
+            print(f"Create Meal Response Code: {meal_response.status_code}")
+            
+            if meal_response.status_code == 200:
+                meal_data = meal_response.json()
+                print(f"Create Meal Response: {json.dumps(meal_data, indent=2)}")
+                meal_id = meal_data.get('id')
+                print(f"✅ Meal created successfully, ID: {meal_id}")
+            else:
+                print(f"❌ Meal creation failed: {meal_response.text}")
+                return
+                
+        except Exception as e:
+            print(f"❌ Meal creation failed: {str(e)}")
+            return
+        
+        print()
+        
+        # Step 3: Fetch meals for that local date with tz_offset_minutes
+        print("Step 3: Fetch meals for that local date with tz_offset_minutes")
+        print("-" * 40)
+        
+        # For Berlin time (+02:00), the offset in minutes is -120 (JS getTimezoneOffset returns negative for ahead of UTC)
+        tz_offset_minutes = -120  # Berlin summer time offset
+        local_date = "2025-01-15"  # The date in local time
+        
+        try:
+            fetch_url = f"{API_BASE}/meals?date={local_date}&tz_offset_minutes={tz_offset_minutes}"
+            fetch_response = self.session.get(fetch_url, headers=headers, timeout=10)
+            print(f"Fetch Meals Request: GET {fetch_url}")
+            print(f"Fetch Meals Headers: {json.dumps(dict(headers), indent=2)}")
+            print(f"Fetch Meals Response Code: {fetch_response.status_code}")
+            
+            if fetch_response.status_code == 200:
+                fetch_data = fetch_response.json()
+                print(f"Fetch Meals Response: {json.dumps(fetch_data, indent=2)}")
+                
+                meals = fetch_data.get('meals', [])
+                daily_total = fetch_data.get('daily_total', 0)
+                
+                # Verify the created meal is returned
+                meal_found = any(meal.get('id') == meal_id for meal in meals)
+                
+                if meal_found and daily_total == 450.0:
+                    print(f"✅ Meal fetch successful: Found {len(meals)} meal(s), daily_total: {daily_total}")
+                else:
+                    print(f"❌ Meal verification failed: meal_found={meal_found}, daily_total={daily_total} (expected 450.0)")
+                    return
+            else:
+                print(f"❌ Meal fetch failed: {fetch_response.text}")
+                return
+                
+        except Exception as e:
+            print(f"❌ Meal fetch failed: {str(e)}")
+            return
+        
+        print()
+        
+        # Step 4: Delete the meal and confirm removal
+        print("Step 4: Delete the meal and confirm removal")
+        print("-" * 40)
+        
+        try:
+            delete_response = self.session.delete(f"{API_BASE}/meals/{meal_id}", headers=headers, timeout=10)
+            print(f"Delete Meal Request: DELETE {API_BASE}/meals/{meal_id}")
+            print(f"Delete Meal Headers: {json.dumps(dict(headers), indent=2)}")
+            print(f"Delete Meal Response Code: {delete_response.status_code}")
+            
+            if delete_response.status_code == 200:
+                delete_data = delete_response.json()
+                print(f"Delete Meal Response: {json.dumps(delete_data, indent=2)}")
+                
+                if delete_data.get('deleted'):
+                    print(f"✅ Meal deleted successfully")
+                else:
+                    print(f"❌ Meal deletion response invalid: {delete_data}")
+                    return
+            else:
+                print(f"❌ Meal deletion failed: {delete_response.text}")
+                return
+                
+        except Exception as e:
+            print(f"❌ Meal deletion failed: {str(e)}")
+            return
+        
+        print()
+        
+        # Verify removal by fetching again
+        print("Verification: Confirm meal removal")
+        print("-" * 40)
+        
+        try:
+            verify_response = self.session.get(fetch_url, headers=headers, timeout=10)
+            print(f"Verify Removal Request: GET {fetch_url}")
+            print(f"Verify Removal Response Code: {verify_response.status_code}")
+            
+            if verify_response.status_code == 200:
+                verify_data = verify_response.json()
+                print(f"Verify Removal Response: {json.dumps(verify_data, indent=2)}")
+                
+                meals_after = verify_data.get('meals', [])
+                daily_total_after = verify_data.get('daily_total', 0)
+                
+                # Verify the meal is no longer there
+                meal_still_exists = any(meal.get('id') == meal_id for meal in meals_after)
+                
+                if not meal_still_exists and daily_total_after == 0.0:
+                    print(f"✅ Meal removal confirmed: {len(meals_after)} meal(s), daily_total: {daily_total_after}")
+                else:
+                    print(f"❌ Meal removal verification failed: meal_still_exists={meal_still_exists}, daily_total={daily_total_after}")
+                    return
+            else:
+                print(f"❌ Meal removal verification failed: {verify_response.text}")
+                return
+                
+        except Exception as e:
+            print(f"❌ Meal removal verification failed: {str(e)}")
+            return
+        
+        print()
+        print("🎉 END-TO-END AUTH + SAVE FLOW VALIDATION COMPLETED SUCCESSFULLY!")
+        print("All steps passed:")
+        print("✅ 1) Register and login to get token")
+        print("✅ 2) Create a meal with captured_at including timezone offset")
+        print("✅ 3) Fetch meals for that local date with tz_offset_minutes; confirm the created meal is returned and daily_total reflects it")
+        print("✅ 4) Delete the meal and confirm removal")
+        
+        self.log_result("End-to-End Auth + Save Flow", True, "All 4 steps completed successfully with proper HTTP codes and data validation")
+
     def run_all_tests(self):
         """Run all backend tests"""
         print("=" * 60)
@@ -280,6 +511,14 @@ class BackendTester:
                     print(f"- {result['test']}: {result['details']}")
         
         return passed == total
+    
+    def run_end_to_end_test_only(self):
+        """Run only the end-to-end auth + save flow test"""
+        self.test_end_to_end_auth_save_flow()
+        
+        # Check if the test passed
+        end_to_end_result = next((r for r in self.test_results if r['test'] == "End-to-End Auth + Save Flow"), None)
+        return end_to_end_result and end_to_end_result['success']
 
 if __name__ == "__main__":
     tester = BackendTester()
