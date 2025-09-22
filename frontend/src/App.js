@@ -565,8 +565,19 @@ export default function App(){
 
   useEffect(()=>{
     (async ()=>{
-      try { await axios.get(`${API}/`); } catch (e) { /* ignore in UI */ }
+      try { await apiClient.get(`${API}/`); } catch (e) { /* ignore in UI */ }
     })();
+  }, []);
+
+  useEffect(()=>{
+    const onExpired = () => {
+      alert('Session expired. Please log in again.');
+      localStorage.removeItem('token');
+      localStorage.removeItem('email');
+      window.location.reload();
+    };
+    window.addEventListener('auth-expired', onExpired);
+    return () => window.removeEventListener('auth-expired', onExpired);
   }, []);
 
   return (
