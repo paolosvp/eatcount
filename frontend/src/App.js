@@ -269,6 +269,25 @@ function DayLogPanel({ auth, refreshKey }) {
     } catch { return isoOrLocal; }
   };
 
+  const toLocalISOWithOffset = (dateObj) => {
+    try {
+      const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
+      const pad = (n) => String(n).padStart(2, '0');
+      const y = d.getFullYear();
+      const m = pad(d.getMonth()+1);
+      const day = pad(d.getDate());
+      const hh = pad(d.getHours());
+      const mm = pad(d.getMinutes());
+      const ss = pad(d.getSeconds());
+      const tz = -d.getTimezoneOffset();
+      const sign = tz >= 0 ? '+' : '-';
+      const abs = Math.abs(tz);
+      const th = pad(Math.floor(abs/60));
+      const tm = pad(abs%60);
+      return `${y}-${m}-${day}T${hh}:${mm}:${ss}${sign}${th}:${tm}`;
+    } catch { return String(dateObj); }
+  };
+
   const fetchMeals = async () => {
     if (!auth.token) { setMeals([]); setTotal(0); setTarget(null); return; }
     try {
