@@ -204,6 +204,13 @@ function DayLogPanel({ auth, refreshKey }) {
   const [streak, setStreak] = useState({ current_streak_days: 0, best_streak_days: 0 });
   const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
 
+  const browserTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const formatLocal = (iso) => {
+    try {
+      return new Date(iso).toLocaleString([], { timeZone: browserTZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+    } catch { return iso; }
+  };
+
   const fetchMeals = async () => {
     if (!auth.token) { setMeals([]); setTotal(0); setTarget(null); return; }
     try {
