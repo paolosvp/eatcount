@@ -359,14 +359,16 @@ function ScannerPanel({ auth, onSaved }) {
     try {
       const payload = { message: desc, images: [{ data: snapshot, mime_type: 'image/jpeg', filename: 'capture.jpg' }], simulate, api_key: apiKey !== '' ? apiKey : undefined };
       const res = await axios.post(`${API}/ai/estimate-calories`, payload);
-      setResult(res.data);
-      if (res.data?.engine_info?.key_mode === 'provided') {
-        console.log('Using provided API key');
-      } else if (res.data?.engine_info?.key_mode === 'emergent') {
-        console.log('Using Emergent LLM Key');
-      } else if (simulate) {
-        console.log('Simulated mode');
+      const data = res.data || {};
+      // Explicitly surface errors in Live mode when model returns unusable content
+      const isLive = !simulate;
+      const empty = (!Array.isArray(data.items) || data.items.length === 0) && Number(data.total_calories || 0) === 0;
+      if (isLive && empty) {
+        setError('AI did not return a usable result. Please try again or add a brief description.');
+        setResult(null);
+        return;
       }
+      setResult(data);
     } catch (e) {
       setError(e?.response?.data?.detail || e.message);
     } finally { setLoading(false); }
