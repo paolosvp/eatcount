@@ -89,6 +89,8 @@ Profile (JWT)
 
 AI Estimate
 - POST /api/ai/estimate-calories { message?, images[], simulate?, api_key? }
+  - **Image-based**: Include images[] array with image data
+  - **Text-based**: Send empty images[] array, require message field
   - Key policy enforced; response includes engine_info
 
 Meals (JWT)
