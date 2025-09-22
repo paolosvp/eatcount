@@ -9,19 +9,19 @@ Live Frontend: configured via frontend/.env (REACT_APP_BACKEND_URL). All backend
 
 Hero & Navigation
 
-![Hero](/root/.emergent/automation_output/20250922_102103/shot_hero.jpeg)
+![Hero](./screenshots/shot_hero.jpeg)
 
 Scanner & Day Log (mobile‑friendly)
 
-![Scan](/root/.emergent/automation_output/20250922_102103/shot_scan.jpeg)
+![Scan](./screenshots/shot_scan.jpeg)
 
 Account (Auth)
 
-![Account](/root/.emergent/automation_output/20250922_102103/shot_account.jpeg)
+![Account](./screenshots/shot_account.jpeg)
 
 Profile (Daily Target)
 
-![Profile](/root/.emergent/automation_output/20250922_102103/shot_profile.jpeg)
+![Profile](./screenshots/shot_profile.jpeg)
 
 
 ## Features
