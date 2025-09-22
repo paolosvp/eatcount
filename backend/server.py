@@ -437,14 +437,24 @@ async def add_meal(meal: MealCreate, user=Depends(get_current_user)):
     created_at = now if not meal.captured_at else datetime.fromisoformat(meal.captured_at)
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=timezone.utc)
+    # Compute a display_local string using provided local captured_at if present
+    # If captured_at has offset, use it for display; else default to ISO
+    display_local = None
+    try:
+        if meal.captured_at:
+            display_local = meal.captured_at
+    except Exception:
+        display_local = None
+
     doc = {
         "_id": meal_id,
         "user_id": user['_id'],
         "total_calories": float(meal.total_calories),
         "items": [i.model_dump() for i in meal.items],
         "notes": meal.notes,
-        "image_base64": meal.image_base64,
-        "created_at": created_at
+        "image_base64": meal.image_base64,  # base64 per guideline
+        "created_at": created_at,
+        "display_local": display_local,
     }
     await db.meals.insert_one(doc)
     return MealOut(
