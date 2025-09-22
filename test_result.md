@@ -227,6 +227,9 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Split estimate functionality implemented with two separate buttons: '📷 Estimate by Image' (conditional visibility) and '✏️ Estimate by Text' (always visible). Need comprehensive testing of new split functionality including conditional visibility, validation, styling, and both estimation paths."
+      - working: true
+        agent: "testing"
+        comment: "SPLIT ESTIMATE FUNCTIONALITY FULLY VERIFIED: ✅ Initial state correct - only 'Estimate by Text' button visible, placeholder shows 'Large pepperoni pizza, 2 slices' (required for text estimation). ✅ After image upload - both buttons visible, placeholder changes to 'No dressing, medium portion' (optional). ✅ Button styling correct - Text button has 'btn-accent' class (purple), Image button has 'btn-primary' class (dark). ✅ Conditional visibility working perfectly - Image button only appears when image uploaded. ✅ Text estimation functional - returns 420 kcal with detailed items breakdown in simulate mode. ✅ Image estimation functional - works with uploaded images in simulate mode. ✅ Validation working - shows error 'Please enter a description for text-based estimation' when clicking text button without description. ✅ API key field properly hidden in test mode, visible in live mode. All test cases passed successfully."
 
 metadata:
   created_by: "main_agent"
