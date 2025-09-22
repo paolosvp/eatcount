@@ -423,7 +423,7 @@ function ScannerPanel({ auth, onSaved }) {
     setLoading(true); setError(''); setResult(null);
     try {
       const payload = { message: desc, images: [{ data: snapshot, mime_type: 'image/jpeg', filename: 'capture.jpg' }], simulate, api_key: apiKey !== '' ? apiKey : undefined };
-      const res = await axios.post(`${API}/ai/estimate-calories`, payload);
+      const res = await apiClient.post(`${API}/ai/estimate-calories`, payload);
       const data = res.data || {};
       // Explicitly surface errors in Live mode when model returns unusable content
       const isLive = !simulate;
