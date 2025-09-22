@@ -310,19 +310,59 @@ async def estimate_calories(payload: AIRequest):
         effective_key = emergent
         key_mode = "emergent"
 
-    try:
-        chat = LlmChat(api_key=effective_key, session_id=str(uuid.uuid4()), system_message=SYSTEM_PROMPT).with_model("openai", "gpt-4o")
-        files: List[ImageContent] = [ImageContent(image_base64=img.data) for img in payload.images]
-        user_text = payload.message or "Estimate calories for the attached food image(s)."
-        umsg = UserMessage(text=user_text, file_contents=files)
+    def _valid(o: Dict[str, Any]) -> bool:
+        try:
+            if not isinstance(o, dict):
+                return False
+            if 'total_calories' not in o or 'items' not in o:
+                return False
+            total = float(o.get('total_calories', 0))
+            items = o.get('items', [])
+            if total <= 0 and (not isinstance(items, list) or len(items) == 0):
+                return False
+            return True
+        except Exception:
+            return False
+
+    async def _ask_llm(prompt_text: str, images: List[ImageContent]):
+        chat = LlmChat(api_key=effective_key, session_id=str(uuid.uuid4()), system_message=prompt_text).with_model("openai", "gpt-4o")
+        umsg = UserMessage(text=(payload.message or "Estimate calories for the attached food image(s)."), file_contents=images)
         resp = await chat.send_message(umsg)
-        raw_text = str(resp)
+        return str(resp)
+
+    try:
+        files: List[ImageContent] = [ImageContent(image_base64=img.data) for img in payload.images]
+        # First attempt
+        raw_text = await _ask_llm(SYSTEM_PROMPT, files)
         try:
             parsed = json.loads(raw_text)
         except Exception:
             parsed = _force_extract_json(raw_text)
-        if not isinstance(parsed, dict) or 'total_calories' not in parsed:
-            parsed = _force_extract_json(raw_text)
+
+        # Second attempt with stricter instruction if invalid
+        if not _valid(parsed):
+            strict_prompt = (
+                "Return ONLY strict JSON in this schema with no markdown or extra text: "
+                '{"total_calories": number, "items": [ { "name": string, "quantity_units": string, "calories": number, "confidence": number } ], "confidence": number, "notes": string }. '
+                "If unsure, provide your best conservative estimate."
+            )
+            raw_text2 = await _ask_llm(strict_prompt, files)
+            try:
+                parsed = json.loads(raw_text2)
+            except Exception:
+                parsed = _force_extract_json(raw_text2)
+
+        # Final fallback if still invalid
+        if not _valid(parsed):
+            parsed = {
+                "total_calories": 400,
+                "items": [
+                    {"name": "Meal", "quantity_units": "1 serving", "calories": 400, "confidence": 0.3}
+                ],
+                "confidence": 0.3,
+                "notes": "Fallback estimate due to unstructured model output"
+            }
+
         # Attach engine info for user awareness
         parsed["engine_info"] = {"key_mode": key_mode, "model": "gpt-4o"}
         return JSONResponse(content=parsed)
