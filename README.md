@@ -62,9 +62,15 @@ Prerequisites
 - Frontend: yarn start (uses REACT_APP_BACKEND_URL for API)
 
 4) Test basic API (simulate)
+**Image-based estimation:**
 - curl -X POST "$REACT_APP_BACKEND_URL/api/ai/estimate-calories" \
   -H 'Content-Type: application/json' \
   -d '{"images":[{"data":"dGVzdA==","mime_type":"image/jpeg"}],"simulate":true}'
+
+**Text-based estimation:**
+- curl -X POST "$REACT_APP_BACKEND_URL/api/ai/estimate-calories" \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Large pepperoni pizza, 2 slices","images":[],"simulate":true}'
 
 5) Login + Save Flow (UI)
 - Register/Login in Account
