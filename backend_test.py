@@ -522,5 +522,11 @@ class BackendTester:
 
 if __name__ == "__main__":
     tester = BackendTester()
-    success = tester.run_all_tests()
+    
+    # Check if we should run only the end-to-end test
+    if len(sys.argv) > 1 and sys.argv[1] == "--end-to-end":
+        success = tester.run_end_to_end_test_only()
+    else:
+        success = tester.run_all_tests()
+    
     sys.exit(0 if success else 1)
