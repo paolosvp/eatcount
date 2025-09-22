@@ -382,8 +382,9 @@ def _day_range_local_to_utc(date_str: Optional[str], tz_offset_minutes: int):
         now = datetime.utcnow()
         local_start = datetime(now.year, now.month, now.day, 0, 0, 0)
 
-    # UTC = local - offset_minutes
-    start_utc = (local_start - timedelta(minutes=tz_offset_minutes)).replace(tzinfo=timezone.utc)
+    # JS getTimezoneOffset(): minutes to add to local time to get UTC
+    # Therefore UTC = local + offset_minutes
+    start_utc = (local_start + timedelta(minutes=tz_offset_minutes)).replace(tzinfo=timezone.utc)
     end_utc = start_utc + timedelta(days=1)
     return start_utc, end_utc
 
