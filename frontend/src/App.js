@@ -357,7 +357,7 @@ function DayLogPanel({ auth, refreshKey }) {
               )}
               <div>
                 <div><b>{Math.round(m.total_calories)}</b> kcal</div>
-                <div className="small">{m.display_local ? m.display_local : formatHuman(m.created_at)}</div>
+                <div className="small">{m.display_local ? formatHuman(m.display_local) : formatHuman(m.created_at)}</div>
                 {m.notes && <div className="small">{m.notes}</div>}
               </div>
             </div>
