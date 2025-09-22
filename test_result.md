@@ -239,7 +239,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Split estimate functionality testing - two separate buttons with conditional visibility and validation"
+    - "All major functionality tested and working"
   stuck_tasks:
     - "None"
   test_all: false
